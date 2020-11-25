@@ -4,12 +4,13 @@ import importlib.util
 from pathlib import Path
 from typing import Tuple
 
+from data_augmentation.VAE.utils import config
+from data_augmentation.VAE.vae_model_v1 import VariationalAutoencoder
+
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torchvision.datasets import MNIST
 from torchvision.transforms import ToTensor
-from VAE.utils import config
-from VAE.vae_model_v1 import VariationalAutoencoder
 
 parser = argparse.ArgumentParser(description="VAE Evaluation.")
 parser.add_argument("-e", "--epochs", type=int, default=10, help="Epochs model trained")

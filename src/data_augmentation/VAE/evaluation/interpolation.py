@@ -1,12 +1,13 @@
 # noqa: D100
 from pathlib import Path
 
+from data_augmentation.VAE.evaluation.evaluation_setup import eval_setup
+from data_augmentation.VAE.vae_model_v1 import VariationalAutoencoder
+
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from torch.utils.data.dataloader import DataLoader
-from VAE.evaluation.evaluation_setup import eval_setup
-from VAE.vae_model_v1 import VariationalAutoencoder
 
 
 def visualize_grid_interpolation(

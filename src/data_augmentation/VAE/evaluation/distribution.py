@@ -1,14 +1,15 @@
 # noqa: D100
 from pathlib import Path
 
+from data_augmentation.VAE.evaluation.evaluation_setup import eval_setup
+from data_augmentation.VAE.vae_model_v1 import VariationalAutoencoder
+
 import numpy as np
 import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from torch.utils.data.dataloader import DataLoader
-from VAE.evaluation.evaluation_setup import eval_setup
-from VAE.vae_model_v1 import VariationalAutoencoder
 
 
 def plot_single_distribution(

@@ -3,14 +3,15 @@ import pickle
 from pathlib import Path
 from shutil import copyfile
 
+from data_augmentation.VAE import vae_model_v1 as vae_model
+from data_augmentation.VAE.utils import config
+
 import torch
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import MNIST
 from tqdm import tqdm
-from VAE import vae_model_v1 as vae_model
-from VAE.utils import config
 
 
 def train_mnist(epochs: int, z_dim: int, alpha: float = 1.0, beta: float = 1.0) -> None:
