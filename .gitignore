@@ -1,0 +1,9 @@
+# folders
+
+# dotfiles
+.vscode
+.nox
+**/.DS_Store
+
+# others
+**/__pycache__

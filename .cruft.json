@@ -1,0 +1,15 @@
+{
+    "template": "git@github.com:iserh/template.git",
+    "commit": "d0ed0899a8b22cae4573c6269b881a4b7cd89b63",
+    "context": {
+        "cookiecutter": {
+            "project_name": "data-augmentation",
+            "description": "Research on data augmentation methods",
+            "_copy_without_render": [
+                ".mustache"
+            ],
+            "_template": "git@github.com:iserh/template.git"
+        }
+    },
+    "directory": null
+}

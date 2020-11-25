@@ -1,0 +1,9 @@
+[flake8]
+select = ANN,B,B9,BLK,C,D,DAR,E,F,I,Q0,S,W
+docstring-convention = google
+ignore = ANN101,ANN003,E203,E501,W503,S311
+max-line-length = 88
+max-complexity = 10
+import-order-style = google
+per-file-ignores =
+    tests/*:S101
