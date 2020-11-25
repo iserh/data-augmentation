@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "template"
+name = "data-augmentation"
 version = "0.1.0"
 description = "Research on data augmentation methods."
 authors = ["Henri Iser <iserh.ml@gmail.com>"]

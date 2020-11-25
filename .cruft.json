@@ -1,6 +1,6 @@
 {
     "template": "git@github.com:iserh/template.git",
-    "commit": "d0ed0899a8b22cae4573c6269b881a4b7cd89b63",
+    "commit": "9a933823cdb30fea4f3cf5caa12659a9f6bd7a1a",
     "context": {
         "cookiecutter": {
             "project_name": "data-augmentation",
