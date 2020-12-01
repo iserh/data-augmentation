@@ -3,8 +3,8 @@ import pickle
 from pathlib import Path
 from shutil import copyfile
 
-from data_augmentation.VAE import vae_model_v1 as vae_model
-from data_augmentation.VAE.utils import config
+from vae import vae_model_v1 as vae_model
+from utils import config
 
 import torch
 from matplotlib import pyplot as plt
@@ -24,7 +24,7 @@ def train_mnist(epochs: int, z_dim: int, alpha: float = 1.0, beta: float = 1.0) 
         beta: Beta for loss
     """
     # create model log directory
-    log_dir = Path(config.model_path / f"MNIST/VAE/{z_dim=}_{alpha=}_{beta=}_{epochs=}")
+    log_dir = Path(config.model_path / f"MNIST/VAE/z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}")
     log_dir.mkdir(exist_ok=True, parents=True)
 
     # Use cuda if available
@@ -116,5 +116,5 @@ if __name__ == "__main__":
     beta = args.beta
 
     print("Initialize VAE training.")
-    print(f"{epochs=}, {z_dim=}, {alpha=}, {beta=}")
+    print(f"z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}")
     train_mnist(epochs=epochs, z_dim=z_dim, alpha=alpha, beta=beta)

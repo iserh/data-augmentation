@@ -4,8 +4,8 @@ import importlib.util
 from pathlib import Path
 from typing import Tuple
 
-from data_augmentation.VAE.utils import config
-from data_augmentation.VAE.vae_model_v1 import VariationalAutoencoder
+from utils import config
+from vae.vae_model_v1 import VariationalAutoencoder
 
 import torch
 from torch.utils.data.dataloader import DataLoader
@@ -36,7 +36,7 @@ def eval_setup(
     Returns:
         VAE model, device, test DataLoader, evaluation dir path
     """
-    eval_dir = Path(config.eval_path / f"MNIST/VAE/{z_dim=}_{alpha=}_{beta=}_{epochs=}")
+    eval_dir = Path(config.eval_path / f"MNIST/VAE/z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}")
     eval_dir.mkdir(exist_ok=True, parents=True)
 
     vae, device = load_vae_model(use_cuda)
@@ -62,7 +62,7 @@ def load_vae_model(use_cuda: bool) -> Tuple[VariationalAutoencoder, str]:
     Returns:
         vae model, device
     """
-    log_dir = Path(config.model_path / f"MNIST/VAE/{z_dim=}_{alpha=}_{beta=}_{epochs=}")
+    log_dir = Path(config.model_path / f"MNIST/VAE/z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}")
 
     # Use cuda if available
     device = ("cuda:0" if torch.cuda.is_available() else "cpu") if use_cuda else "cpu"
@@ -79,4 +79,4 @@ def load_vae_model(use_cuda: bool) -> Tuple[VariationalAutoencoder, str]:
 
 
 if __name__ == "__main__":
-    print(f"{epochs=}, {z_dim=}, {alpha=}, {beta=}")
+    print(f"z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}")

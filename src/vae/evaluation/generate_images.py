@@ -1,8 +1,8 @@
 # noqa: D100
 from pathlib import Path
 
-from data_augmentation.VAE.evaluation.evaluation_setup import eval_setup
-from data_augmentation.VAE.vae_model_v1 import VariationalAutoencoder
+from vae.evaluation.evaluation_setup import eval_setup
+from vae.vae_model_v1 import VariationalAutoencoder
 
 import torch
 from matplotlib import pyplot as plt
@@ -20,7 +20,7 @@ def generate_from_test(
         test_loader: Test DataLoader
         eval_dir: Evaluation dir
     """
-    filenames = ["generated_from_test_original.png", "generated_from_test_gen.png"]
+    filename = "generated_from_test.png"
 
     n, m = 10, 20
 
@@ -48,20 +48,14 @@ def generate_from_test(
         .reshape(n * 28, m * 28)
     )
 
+    _, ax = plt.subplots(2, 1, sharex=True, figsize=(m, 2 * n))
     # plot original images
-    plt.figure(figsize=(n, m))
-    plt.imshow(X, cmap="gray")
-    plt.savefig(eval_dir / filenames[0])
-
+    ax[0].imshow(X, cmap="gray")
     # plot generated images
-    plt.figure(figsize=(n, m))
-    plt.imshow(X_, cmap="gray")
-    plt.savefig(eval_dir / filenames[1])
+    ax[1].imshow(X_, cmap="gray")
+    plt.savefig(eval_dir / filename)
 
-    print(
-        f"Generated images from test results in {eval_dir / filenames[0]}"
-        + f" and {eval_dir / filenames[1]}"
-    )
+    print(f"Generated images from test results in {eval_dir / filename}")
 
 
 def generate_from_normal(
@@ -90,9 +84,8 @@ def generate_from_normal(
     X_ = X_.numpy().reshape(n, m, 28, 28).transpose(0, 2, 1, 3).reshape(n * 28, m * 28)
 
     # plot
-    plt.figure(figsize=(n, m))
+    plt.figure(figsize=(m, n))
     plt.imshow(X_, cmap="gray")
-    plt.show()
     plt.savefig(eval_dir / filename)
 
     print(f"Generated images from normal results in {eval_dir / filename}")

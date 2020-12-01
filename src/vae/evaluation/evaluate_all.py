@@ -1,12 +1,12 @@
 # noqa: D100
-from data_augmentation.VAE.evaluation.distribution import plot_single_distribution
-from data_augmentation.VAE.evaluation.evaluation_setup import eval_setup
-from data_augmentation.VAE.evaluation.feature_space import visualize_feature_space
-from data_augmentation.VAE.evaluation.generate_images import (
+from vae.evaluation.distribution import plot_single_distribution
+from vae.evaluation.evaluation_setup import eval_setup
+from vae.evaluation.feature_space import visualize_feature_space
+from vae.evaluation.generate_images import (
     generate_from_normal,
     generate_from_test,
 )
-from data_augmentation.VAE.evaluation.interpolation import (
+from vae.evaluation.interpolation import (
     interpolate_two_ciffers,
     visualize_grid_interpolation,
 )

@@ -1,8 +1,8 @@
 # noqa: D100
 from pathlib import Path
 
-from data_augmentation.VAE.evaluation.evaluation_setup import eval_setup
-from data_augmentation.VAE.vae_model_v1 import VariationalAutoencoder
+from vae.evaluation.evaluation_setup import eval_setup
+from vae.vae_model_v1 import VariationalAutoencoder
 
 import torch
 from matplotlib import pyplot as plt
