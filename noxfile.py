@@ -4,11 +4,10 @@ import configparser
 import nox
 from nox.sessions import Session
 
-python_versions = ["3.8"]
+python_versions = ["3.7"]
 nox.options.sessions = "fmt", "lint"
 locations = (
     "src",
-    "tests",
     "noxfile.py",
     "pyproject_sort.py",
 )
@@ -87,15 +86,3 @@ def fmt(session: Session) -> None:
     session.run("python", "-m", "reindent", "-r", "-n", *args)
     session.run("black", "--line-length", f"{max_line_length}", *args)
     session.run("poetry", "run", "python", "pyproject_sort.py", external=True)
-
-
-@nox.session(python=python_versions)
-def tests(session: Session) -> None:
-    """Run the test suite.
-
-    Args:
-        session (Session): Nox session
-    """
-    args = session.posargs or ["--cov", "-m", "not e2e"]
-    session.install("torch", "coverage", "pytest", "pytest-cov", "pytest-mock")
-    session.run("pytest", "--ff", *args)
