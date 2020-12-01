@@ -100,7 +100,7 @@ class VariationalAutoencoder(nn.Module):
         self.encoder = Encoder(z_dim)
         self.decoder = Decoder(z_dim)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         """Forward pass.
 
         Args:

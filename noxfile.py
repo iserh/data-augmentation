@@ -96,6 +96,6 @@ def tests(session: Session) -> None:
     Args:
         session (Session): Nox session
     """
-    args = session.posargs or ["--pspec", "--cov", "-m", "not e2e"]
-    session.install("coverage", "pytest", "pytest-cov", "pytest-pspec", "pytest-mock")
+    args = session.posargs or ["--cov", "-m", "not e2e"]
+    session.install("torch", "coverage", "pytest", "pytest-cov", "pytest-mock")
     session.run("pytest", "--ff", *args)
