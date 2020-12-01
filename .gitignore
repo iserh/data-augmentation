@@ -4,9 +4,8 @@ data
 # dotfiles
 .vscode
 .nox
-.pytest_cache
+.python-version
 **/.DS_Store
-.coverage
 
 # others
 **/__pycache__
