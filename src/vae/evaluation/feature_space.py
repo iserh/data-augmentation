@@ -6,6 +6,8 @@ from vae.vae_model_v1 import VariationalAutoencoder
 
 import torch
 from matplotlib import pyplot as plt
+from scipy.spatial import ConvexHull
+from sklearn.covariance import EllipticEnvelope
 from sklearn.decomposition import PCA
 from torch.utils.data.dataloader import DataLoader
 
@@ -22,6 +24,7 @@ def visualize_feature_space(
         eval_dir: Evaluation dir
     """
     filename = "feature_space.png"
+    colors = plt.get_cmap("tab10")
 
     # get means of latent distribution and labels of each example
     with torch.no_grad():
@@ -33,14 +36,27 @@ def visualize_feature_space(
         )
 
     # perform PCA if latent space has dim > 2
-    reduced_z = PCA(n_components=2).fit(z).transform(z) if vae.z_dim > 2 else z
+    z = PCA(n_components=3).fit(z).transform(z) if vae.z_dim > 3 else z
 
-    # plot latent means for each class
-    plt.figure(figsize=(16, 16))
+    # plot result
+    fig = plt.figure(figsize=(16, 16))
+    ax = fig.add_subplot(111, projection="3d" if vae.z_dim >= 3 else None)
     for i in range(10):
+        # get vectors that match label i
         mask = test_labels == i
-        plt.scatter(reduced_z[mask, 0], reduced_z[mask, 1], s=10)
-    plt.legend(range(10))
+        points = z[mask]
+        # remove outliers
+        points = points[(EllipticEnvelope(contamination=0.5).fit_predict(points) == 1)]
+        # plot these points
+        ax.scatter(
+            *[z[mask, i] for i in range(z.shape[1])], s=10, color=colors(i), label=i
+        )
+        # compute convex hull
+        hull = ConvexHull(points)
+        # plot convex hull
+        for simplex in hull.simplices:
+            ax.plot(points[simplex, 0], points[simplex, 1], "k-", color=colors(i))
+    ax.legend()
     plt.savefig(eval_dir / filename)
 
     print(f"Feature space visualization results in {eval_dir / filename}")

@@ -36,7 +36,10 @@ def eval_setup(
     Returns:
         VAE model, device, test DataLoader, evaluation dir path
     """
-    eval_dir = Path(config.eval_path / f"MNIST/VAE/z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}")
+    eval_dir = Path(
+        config.eval_path
+        / f"MNIST/VAE/z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}"
+    )
     eval_dir.mkdir(exist_ok=True, parents=True)
 
     vae, device = load_vae_model(use_cuda)
@@ -62,7 +65,10 @@ def load_vae_model(use_cuda: bool) -> Tuple[VariationalAutoencoder, str]:
     Returns:
         vae model, device
     """
-    log_dir = Path(config.model_path / f"MNIST/VAE/z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}")
+    log_dir = Path(
+        config.model_path
+        / f"MNIST/VAE/z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}"
+    )
 
     # Use cuda if available
     device = ("cuda:0" if torch.cuda.is_available() else "cpu") if use_cuda else "cpu"
