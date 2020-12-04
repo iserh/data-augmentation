@@ -4,6 +4,7 @@ from pathlib import Path
 from vae.evaluation.evaluation_setup import eval_setup
 from vae.vae_model_v1 import VariationalAutoencoder
 
+import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from scipy.spatial import ConvexHull
@@ -47,15 +48,21 @@ def visualize_feature_space(
         points = z[mask]
         # remove outliers
         points = points[(EllipticEnvelope(contamination=0.5).fit_predict(points) == 1)]
+        points = points[np.random.choice(points.shape[0], 100)]
         # plot these points
         ax.scatter(
-            *[z[mask, i] for i in range(z.shape[1])], s=10, color=colors(i), label=i
+            *[z[mask, i] for i in range(z.shape[1])], s=1, color=colors(i), label=i
         )
         # compute convex hull
         hull = ConvexHull(points)
         # plot convex hull
         for simplex in hull.simplices:
-            ax.plot(points[simplex, 0], points[simplex, 1], "k-", color=colors(i))
+            simplex = np.append(simplex, simplex[0])
+            ax.plot(
+                *[points[simplex, i] for i in range(points.shape[1])],
+                "k-",
+                color=colors(i),
+            )
     ax.legend()
     plt.savefig(eval_dir / filename)
 

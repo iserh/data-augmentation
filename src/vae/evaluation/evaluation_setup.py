@@ -79,7 +79,9 @@ def load_vae_model(use_cuda: bool) -> Tuple[VariationalAutoencoder, str]:
     vae_model = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(vae_model)
     vae = vae_model.VariationalAutoencoder(z_dim).to(device)
-    vae.load_state_dict(torch.load(log_dir / "state_dict.pt"))
+    vae.load_state_dict(
+        torch.load(log_dir / "state_dict.pt", map_location=torch.device(device))
+    )
 
     return vae, device
 
