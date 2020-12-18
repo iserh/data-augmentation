@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="VAE Training.")
     parser.add_argument(
-        "-e", "--epochs", type=int, default=10, help="Epochs model trained"
+        "-e", "--epochs", type=int, default=20, help="Epochs model trained"
     )
     parser.add_argument(
         "-z", "--z_dim", type=int, default=2, help="Dimension latent space"

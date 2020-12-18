@@ -8,7 +8,7 @@ from vae.evaluation.interpolation import (
     visualize_grid_interpolation,
 )
 
-setup_objects = eval_setup(use_cuda=False)
+setup_objects = eval_setup()
 
 visualize_feature_space(*setup_objects)
 visualize_grid_interpolation(*setup_objects)

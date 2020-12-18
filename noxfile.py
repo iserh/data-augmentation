@@ -85,4 +85,4 @@ def fmt(session: Session) -> None:
     )
     session.run("python", "-m", "reindent", "-r", "-n", *args)
     session.run("black", "--line-length", f"{max_line_length}", *args)
-    session.run("poetry", "run", "python", "pyproject_sort.py", external=True)
+    # session.run("poetry", "run", "python", "pyproject_sort.py", external=True)
