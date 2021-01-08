@@ -1,123 +1,117 @@
 """Training script for variational autoencoder on mnist."""
-import pickle
 from pathlib import Path
-from shutil import copyfile
 
-from utils import config
-from vae import vae_model_v1 as vae_model
+from utils import get_artifact_path
+from vae import vae_model
 
+import mlflow
 import torch
-from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import MNIST
 from tqdm import tqdm
 
+# *** Hyperparameters ***
 
-def train_mnist(epochs: int, z_dim: int, alpha: float = 1.0, beta: float = 1.0) -> None:
-    """Train variational autoencoder on mnist.
-
-    Args:
-        epochs: Number of epochs
-        z_dim: Dimension of the latent space
-        alpha: Alpha for loss
-        beta: Beta for loss
-    """
-    # create model log directory
-    log_dir = Path(
-        config.model_path
-        / f"MNIST/VAE/z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}"
-    )
-    log_dir.mkdir(exist_ok=True, parents=True)
-
-    # Use cuda if available
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    print("Using device:", device)
-
-    # Model
-    vae = vae_model.VariationalAutoencoder(z_dim=z_dim).to(device)
-    # Optimizer
-    optim = torch.optim.Adam(vae.parameters())
-    # Loss
-    vae_loss = vae_model.vae_loss
-    # Save model architecture
-    copyfile(Path(vae_model.__file__), log_dir / "vae_model.py")
-
-    # Load datasets
-    mnist_train = MNIST(
-        root="~/torch_datasets",
-        download=True,
-        transform=transforms.ToTensor(),
-        train=True,
-    )
-    train_loader = DataLoader(mnist_train, batch_size=64, shuffle=True)
-
-    # Losses
-    bce_losses, kld_losses = [], []
-
-    vae.train()
-    for epoch in range(epochs):
-        with tqdm(total=len(train_loader)) as pbar:
-            pbar.set_description(f"Train Epoch {epoch + 1}/{epochs}", refresh=True)
-
-            for x_true, _ in train_loader:
-                x_true = x_true.to(device)
-
-                # predict and compute loss
-                x_hat, mean, variance_log = vae(x_true)
-                bce_l, kld_l = vae_loss(x_hat, x_true, mean, variance_log, alpha, beta)
-
-                # update parameters
-                optim.zero_grad()
-                (bce_l + kld_l).backward()
-                optim.step()
-
-                # update losses
-                bce_losses.append(bce_l.item())
-                kld_losses.append(kld_l.item())
-
-                # progress
-                pbar.set_postfix(
-                    {"bce-loss": bce_losses[-1], "kld-loss": kld_losses[-1]}
-                )
-                pbar.update(1)
-
-        # save model
-        torch.save(vae.state_dict(), log_dir / "state_dict.pt")
-
-        # save losses to file
-        with open(log_dir / "losses.pkl", "wb") as outfile:
-            pickle.dump({"bce_losses": bce_losses, "kld_losses": kld_losses}, outfile)
-
-        # plot losses
-        plt.figure(figsize=(16, 8))
-        plt.plot(bce_losses, label="Binary Cross Entropy")
-        plt.plot(kld_losses, label="KL Divergence")
-        plt.legend()
-        plt.title("Losses")
-        plt.savefig(log_dir / "losses.png")
-        plt.close()
+EPOCHS = 20
+Z_DIM = 2
+ALPHA = 1.0
+BETA = 1.0
+TARGET_LABEL = 4
 
 
-if __name__ == "__main__":
-    import argparse
+# *** Mlflow initialization ***
 
-    parser = argparse.ArgumentParser(description="VAE Training.")
-    parser.add_argument(
-        "-e", "--epochs", type=int, default=20, help="Epochs model trained"
-    )
-    parser.add_argument(
-        "-z", "--z_dim", type=int, default=2, help="Dimension latent space"
-    )
-    parser.add_argument("-a", "--alpha", type=float, default=1.0, help="Alpha")
-    parser.add_argument("-b", "--beta", type=float, default=1.0, help="Beta")
-    args = parser.parse_args()
+# initialize mlflow experiment & run
+experiment = mlflow.get_experiment_by_name("VAE MNIST")
+if not experiment:
+    experiment = mlflow.get_experiment(mlflow.create_experiment("VAE MNIST"))
+run = mlflow.start_run(
+    experiment_id=experiment.experiment_id,
+)
+artifact_path = get_artifact_path(run)
 
-    epochs = args.epochs
-    z_dim = args.z_dim
-    alpha = args.alpha
-    beta = args.beta
+# log hyperparameters
+mlflow.log_params(
+    {
+        "epochs": EPOCHS,
+        "z_dim": Z_DIM,
+        "alpha": ALPHA,
+        "beta": BETA,
+        "target_label": TARGET_LABEL,
+    }
+)
 
-    print("Initialize VAE training.")
-    print(f"z_dim={z_dim}_alpha={alpha}_beta={beta}_epochs={epochs}")
-    train_mnist(epochs=epochs, z_dim=z_dim, alpha=alpha, beta=beta)
+# *** Model initialization ***
+
+# Use cuda if available
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+print("Using device:", device)
+
+# Model
+vae = vae_model.VariationalAutoencoder(z_dim=Z_DIM).to(device)
+# Optimizer
+optim = torch.optim.Adam(vae.parameters())
+# Loss
+vae_loss = vae_model.vae_loss
+
+
+# *** Data preparation ***
+
+# Load datasets
+mnist = MNIST(
+    root="~/torch_datasets",
+    download=True,
+    transform=transforms.ToTensor(),
+    train=True,
+)
+dataset = (
+    torch.utils.data.Subset(mnist, torch.where(mnist.targets == TARGET_LABEL)[0])
+    if TARGET_LABEL is not None
+    else mnist
+)
+dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
+
+
+# *** Training ***
+
+vae.train()
+step = 0
+for epoch in range(EPOCHS):
+    kld_losses, bce_losses = [], []
+    with tqdm(total=len(dataloader)) as pbar:
+        pbar.set_description(f"Train Epoch {epoch + 1}/{EPOCHS}", refresh=True)
+
+        for x_true, _ in dataloader:
+            step += 1
+            x_true = x_true.to(device)
+
+            # predict and compute loss
+            x_hat, mean, variance_log = vae(x_true)
+            bce_l, kld_l = vae_loss(x_hat, x_true, mean, variance_log, ALPHA, BETA)
+
+            # update parameters
+            optim.zero_grad()
+            (bce_l + kld_l).backward()
+            optim.step()
+
+            # update losses
+            mlflow.log_metrics(
+                {
+                    "binary_crossentropy_loss": bce_l.item(),
+                    "kl_divergence_loss": kld_l.item(),
+                },
+                step=step,
+            )
+
+            # progress
+            pbar.set_postfix({"bce-loss": bce_l.item(), "kld-loss": kld_l.item()})
+            pbar.update(1)
+
+mlflow.pytorch.save_model(
+    vae,
+    artifact_path / "model",
+    code_paths=[Path(vae_model.__file__)],
+)
+
+mlflow.end_run()

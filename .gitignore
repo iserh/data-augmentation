@@ -6,6 +6,7 @@ data
 .nox
 .python-version
 **/.DS_Store
+mlruns
 
 # others
 **/__pycache__
