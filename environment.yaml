@@ -158,4 +158,4 @@ dependencies:
     - urllib3==1.26.2
     - websocket-client==0.57.0
     - werkzeug==1.0.1
-
+prefix: ~/.conda/envs/vae
