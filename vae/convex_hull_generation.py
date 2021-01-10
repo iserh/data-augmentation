@@ -34,14 +34,19 @@ def dist_in_hull(points: np.ndarray, n: int) -> np.ndarray:
 
 # *** HYPERPARAMETERS ***
 
-EPOCHS = 20
-Z_DIM = 2
-ALPHA = 1.0
-BETA = 1.0
+VAE_EPOCHS = 20
+VAE_Z_DIM = 2
+VAE_ALPHA = 1.0
+VAE_BETA = 1.0
+VAE_N_EXAMPLES_LIMIT = None
+VAE_TARGET_LABELS = None
 
+N_EXAMPLES = None
+N_SAMPLES = 2000
 OUTLIER_CONTAMINATION = 0.25
-N_EXAMPLES = 1000
-N_SAMPLES = 2_000
+
+
+# *** Mlflow initialization ***
 
 # initialize mlflow experiment & run
 experiment = mlflow.get_experiment_by_name("MNIST Generation")
@@ -51,21 +56,38 @@ run = mlflow.start_run(experiment_id=experiment.experiment_id, run_name="convex_
 artifact_path = get_artifact_path(run)
 (artifact_path / "data").mkdir(exist_ok=True, parents=True)
 
+# log hyperparameters
 mlflow.log_params(
     {
-        "epochs": EPOCHS,
-        "z_dim": Z_DIM,
-        "alpha": ALPHA,
-        "beta": BETA,
-        "outlier_contamination": OUTLIER_CONTAMINATION,
-        "n_samples": N_SAMPLES,
+        "VAE_EPOCHS": VAE_EPOCHS,
+        "VAE_Z_DIM": VAE_Z_DIM,
+        "VAE_ALPHA": VAE_ALPHA,
+        "VAE_BETA": VAE_BETA,
+        "VAE_TARGET_LABELS": VAE_TARGET_LABELS,
+        "VAE_N_EXAMPLES_LIMIT": VAE_N_EXAMPLES_LIMIT,
+        "N_EXAMPLES": N_EXAMPLES,
+        "N_SAMPLES": N_SAMPLES,
+        "OUTLIER_CONTAMINATION": OUTLIER_CONTAMINATION,
     }
 )
 
 
 # *** Data preparation ***
 
-(vae, device), _ = load_model(EPOCHS, Z_DIM, ALPHA, BETA, cuda=False)
+try:
+    (vae, device), _ = load_model(
+        VAE_EPOCHS,
+        VAE_Z_DIM,
+        VAE_ALPHA,
+        VAE_BETA,
+        VAE_TARGET_LABELS,
+        VAE_N_EXAMPLES_LIMIT,
+        use_cuda=False,
+    )
+except LookupError:
+    mlflow.end_run("KILLED")
+    print("No Run with specified criteria found")
+    exit(0)
 
 # Load dataset
 mnist = MNIST(
@@ -74,21 +96,33 @@ mnist = MNIST(
     transform=ToTensor(),
     train=False,
 )
-dataset = torch.utils.data.Subset(
-    mnist, torch.randint(0, len(mnist), size=(N_EXAMPLES,))
-)
+dataset = mnist
+# filter target labels
+if VAE_TARGET_LABELS:
+    indices = torch.where(
+        torch.stack([(mnist.targets == t) for t in VAE_TARGET_LABELS]).sum(axis=0)
+    )[0]
+    dataset = torch.utils.data.Subset(mnist, indices)
+# set amount of examples to be generated
+if N_EXAMPLES:
+    indices = torch.randperm(len(dataset))[:N_EXAMPLES]
+    dataset = torch.utils.data.Subset(mnist, indices)
+# create dataloader
 dataloader = DataLoader(dataset, batch_size=512, shuffle=True)
+
+
+# *** Generation ***
 
 # get means of encoded latent distributions
 with torch.no_grad():
     means, labels = zip(*[(vae.encoder(x.to(device))[0], y) for x, y in dataloader])
     means = torch.cat(means, dim=0).cpu().numpy()
-    labels = torch.cat(labels, dim=0)
+    labels = torch.cat(labels, dim=0).numpy()
 
-unique_labels = torch.unique(labels, sorted=True).int().tolist()
+unique_labels = np.unique(labels).astype('int')
 
 np.savetxt(artifact_path / "data" / "encoded_means.txt", means)
-np.savetxt(artifact_path / "data" / "encoded_labels.txt", labels.numpy())
+np.savetxt(artifact_path / "data" / "encoded_labels.txt", labels)
 
 
 # *** compute convex hull of means and sample from it ***

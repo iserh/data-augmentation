@@ -1,5 +1,5 @@
 """Module loading."""
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import mlflow
 import torch.cuda as cuda
@@ -12,7 +12,8 @@ def load_model(
     z_dim: int,
     alpha: float,
     beta: float,
-    target_label: Optional[int] = None,
+    target_labels: Optional[List[int]] = None,
+    n_examples_limit: Optional[int] = None,
     use_cuda: bool = True,
 ) -> Tuple[Tuple[VariationalAutoencoder, str], mlflow.entities.Run]:
     """Loads the pytorch VAE model and mlflow run.
@@ -22,7 +23,8 @@ def load_model(
         z_dim (int): Dimension of latent space
         alpha (float): Alpha
         beta (float): Beta
-        target_label (Optional[int]): Target labels, selects all if None
+        target_labels (Optional[int]): Target labels, selects all if None
+        n_examples_limit (Optional[List[int]]): Limit number of examples for training
         use_cuda (bool): Use cuda if available
 
     Returns:
@@ -30,15 +32,19 @@ def load_model(
     """
     experiment_id = mlflow.get_experiment_by_name("VAE MNIST").experiment_id
     filter_str = (
-        f"params.epochs = '{epochs}' AND "
-        + f"params.z_dim = '{z_dim}' AND "
-        + f"params.alpha = '{alpha}' AND "
-        + f"params.beta = '{beta}' AND "
-        + f"params.target_label = '{target_label}'"
+        f"params.EPOCHS = '{epochs}' AND "
+        + f"params.Z_DIM = '{z_dim}' AND "
+        + f"params.ALPHA = '{alpha}' AND "
+        + f"params.BETA = '{beta}' AND "
+        + f"params.TARGET_LABELS = '{target_labels}' AND "
+        + f"params.N_EXAMPLES_LIMIT = '{n_examples_limit}'"
     )
-    run = mlflow.search_runs(
-        experiment_ids=[experiment_id], filter_string=filter_str
-    ).iloc[0]
+    try:
+        run = mlflow.search_runs(
+            experiment_ids=[experiment_id], filter_string=filter_str
+        ).iloc[0]
+    except IndexError:
+        raise LookupError()
 
     device = "cuda:0" if cuda.is_available() and use_cuda else "cpu"
     print("Using device:", device)

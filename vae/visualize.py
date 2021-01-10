@@ -1,5 +1,6 @@
 """Data generation with convex hulls."""
 import mlflow
+import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from matplotlib.cm import get_cmap
@@ -13,13 +14,14 @@ from vae.model_setup import load_model
 
 # *** HYPERPARAMETERS ***
 
-EPOCHS = 20
-Z_DIM = 2
-ALPHA = 1.0
-BETA = 1.0
+VAE_EPOCHS = 20
+VAE_Z_DIM = 2
+VAE_ALPHA = 1.0
+VAE_BETA = 1.0
+VAE_N_EXAMPLES_LIMIT = None
+VAE_TARGET_LABELS = None
 
-N_EXAMPLES = 10_000
-TARGET_LABEL = 4
+N_EXAMPLES = None
 
 
 # *** Mlflow initialization ***
@@ -35,36 +37,53 @@ artifact_path = get_artifact_path(run)
 # log hyperparameters
 mlflow.log_params(
     {
-        "epochs": EPOCHS,
-        "z_dim": Z_DIM,
-        "alpha": ALPHA,
-        "beta": BETA,
-        "n_examples": N_EXAMPLES,
-        "target_label": TARGET_LABEL,
+        "VAE_EPOCHS": VAE_EPOCHS,
+        "VAE_Z_DIM": VAE_Z_DIM,
+        "VAE_ALPHA": VAE_ALPHA,
+        "VAE_BETA": VAE_BETA,
+        "VAE_TARGET_LABELS": VAE_TARGET_LABELS,
+        "VAE_N_EXAMPLES_LIMIT": VAE_N_EXAMPLES_LIMIT,
+        "N_EXAMPLES": N_EXAMPLES,
     }
 )
 
 
 # *** Data preparation ***
 
-(vae, device), _ = load_model(EPOCHS, Z_DIM, ALPHA, BETA, TARGET_LABEL, cuda=False)
+try:
+    (vae, device), _ = load_model(
+        VAE_EPOCHS,
+        VAE_Z_DIM,
+        VAE_ALPHA,
+        VAE_BETA,
+        VAE_TARGET_LABELS,
+        VAE_N_EXAMPLES_LIMIT,
+        use_cuda=False,
+    )
+except LookupError:
+    mlflow.end_run("KILLED")
+    print("No Run with specified criteria found")
+    exit(0)
 
 # Load dataset
 mnist = MNIST(
     root="~/torch_datasets",
     download=True,
     transform=ToTensor(),
-    train=False,
+    train=True,
 )
-if TARGET_LABEL is not None:
-    target_idx = torch.where(mnist.targets == TARGET_LABEL)[0]
-    dataset = torch.utils.data.Subset(
-        mnist, target_idx[torch.randint(0, target_idx.size(0), (N_EXAMPLES,))]
-    )
-else:
-    dataset = torch.utils.data.Subset(
-        mnist, torch.randint(0, len(mnist), (N_EXAMPLES,))
-    )
+dataset = mnist
+# filter target labels
+if VAE_TARGET_LABELS:
+    indices = torch.where(
+        torch.stack([(mnist.targets == t) for t in VAE_TARGET_LABELS]).sum(axis=0)
+    )[0]
+    dataset = torch.utils.data.Subset(mnist, indices)
+# set amount of examples to be visualized
+if N_EXAMPLES:
+    indices = torch.randperm(len(dataset))[:N_EXAMPLES]
+    dataset = torch.utils.data.Subset(mnist, indices)
+# create dataloader
 dataloader = DataLoader(dataset, batch_size=512, shuffle=False)
 
 # *** Encoder Space Visualization ***
@@ -75,9 +94,9 @@ with torch.no_grad():
     means, variance_logs = zip(*m_v_log)
     means = torch.cat(means, dim=0).cpu().numpy()
     variance_logs = torch.cat(variance_logs, dim=0).cpu().numpy()
-    labels = torch.cat(labels, dim=0)
+    labels = torch.cat(labels, dim=0).numpy()
 
-unique_labels = torch.unique(labels, sorted=True).int().tolist()
+unique_labels = np.unique(labels).astype('int')
 
 # plot encoded latent means
 fig = plt.figure(figsize=(16, 16))

@@ -14,10 +14,11 @@ from utils import get_artifact_path
 # *** Hyperparameters ***
 
 EPOCHS = 20
-Z_DIM = 4
+Z_DIM = 10
 ALPHA = 1.0
 BETA = 1.0
-TARGET_LABEL = None
+TARGET_LABELS = None
+N_EXAMPLES_LIMIT = None
 
 
 # *** Mlflow initialization ***
@@ -34,11 +35,12 @@ artifact_path = get_artifact_path(run)
 # log hyperparameters
 mlflow.log_params(
     {
-        "epochs": EPOCHS,
-        "z_dim": Z_DIM,
-        "alpha": ALPHA,
-        "beta": BETA,
-        "target_label": TARGET_LABEL,
+        "EPOCHS": EPOCHS,
+        "Z_DIM": Z_DIM,
+        "ALPHA": ALPHA,
+        "BETA": BETA,
+        "TARGET_LABELS": TARGET_LABELS,
+        "N_EXAMPLES_LIMIT": N_EXAMPLES_LIMIT,
     }
 )
 
@@ -58,18 +60,25 @@ vae_loss = vae_model.vae_loss
 
 # *** Data preparation ***
 
-# Load datasets
+# Load dataset
 mnist = MNIST(
     root="~/torch_datasets",
     download=True,
     transform=transforms.ToTensor(),
     train=True,
 )
-dataset = (
-    torch.utils.data.Subset(mnist, torch.where(mnist.targets == TARGET_LABEL)[0])
-    if TARGET_LABEL is not None
-    else mnist
-)
+dataset = mnist
+# filter target labels
+if TARGET_LABELS:
+    indices = torch.where(
+        torch.stack([(mnist.targets == t) for t in TARGET_LABELS]).sum(axis=0)
+    )[0]
+    dataset = torch.utils.data.Subset(mnist, indices)
+# limit number of examples used for training
+if N_EXAMPLES_LIMIT:
+    indices = torch.randperm(len(dataset))[:N_EXAMPLES_LIMIT]
+    dataset = torch.utils.data.Subset(mnist, indices)
+# create dataloader
 dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
 
 
