@@ -7,7 +7,8 @@ from nox.sessions import Session
 python_versions = ["3.9"]
 nox.options.sessions = "fmt", "lint"
 locations = (
-    "src",
+    "vae",
+    "utils",
     "noxfile.py",
 )
 
