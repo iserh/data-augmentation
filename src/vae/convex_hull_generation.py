@@ -1,7 +1,4 @@
 """Data generation with convex hulls."""
-from utils import get_artifact_path, reshape_to_img
-from vae.model_setup import load_model
-
 import mlflow
 import numpy as np
 import torch
@@ -16,6 +13,9 @@ from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
 from torchvision.datasets.mnist import MNIST
 from torchvision.transforms import ToTensor
+
+from utils import get_artifact_path, reshape_to_img
+from vae.model_setup import load_model
 
 
 def dist_in_hull(points: np.ndarray, n: int) -> np.ndarray:
@@ -110,7 +110,9 @@ for i in unique_labels:
         else True
     )
     # sample new latent variables from convex hull of points
-    generated_z.append(dist_in_hull(points[outlier_mask], n=N_SAMPLES // len(unique_labels)))
+    generated_z.append(
+        dist_in_hull(points[outlier_mask], n=N_SAMPLES // len(unique_labels))
+    )
     generated_labels.append([i] * (N_SAMPLES // len(unique_labels)))
     # plot points reduced to 2d, with 2d convex hull
     points_2d = (

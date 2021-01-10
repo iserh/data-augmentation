@@ -1,9 +1,6 @@
 """Training script for variational autoencoder on mnist."""
 from pathlib import Path
 
-from utils import get_artifact_path
-from vae import vae_model
-
 import mlflow
 import torch
 from torch.utils.data import DataLoader
@@ -11,13 +8,16 @@ from torchvision import transforms
 from torchvision.datasets import MNIST
 from tqdm import tqdm
 
+import vae.vae_model as vae_model
+from utils import get_artifact_path
+
 # *** Hyperparameters ***
 
 EPOCHS = 20
-Z_DIM = 2
+Z_DIM = 4
 ALPHA = 1.0
 BETA = 1.0
-TARGET_LABEL = 4
+TARGET_LABEL = None
 
 
 # *** Mlflow initialization ***

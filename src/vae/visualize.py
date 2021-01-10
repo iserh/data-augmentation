@@ -1,16 +1,15 @@
 """Data generation with convex hulls."""
-from utils import get_artifact_path
-from vae.model_setup import load_model
-
 import mlflow
 import torch
 from matplotlib import pyplot as plt
 from matplotlib.cm import get_cmap
-from numpy.lib.function_base import interp
 from sklearn.decomposition import PCA
 from torch.utils.data.dataloader import DataLoader
 from torchvision.datasets.mnist import MNIST
 from torchvision.transforms import ToTensor
+
+from utils import get_artifact_path
+from vae.model_setup import load_model
 
 # *** HYPERPARAMETERS ***
 

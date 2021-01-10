@@ -2,11 +2,11 @@
 from pathlib import Path
 from typing import Tuple
 
+from torch.utils.data.dataloader import DataLoader
+
 from utils import config
 from vae.model_setup import alpha, beta, epochs, model_setup, z_dim
 from vae.vae_model_v1 import VariationalAutoencoder
-
-from torch.utils.data.dataloader import DataLoader
 
 
 def eval_setup() -> Tuple[VariationalAutoencoder, str, DataLoader, Path]:

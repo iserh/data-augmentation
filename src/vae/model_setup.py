@@ -1,10 +1,10 @@
 """Module loading."""
 from typing import Optional, Tuple
 
-from vae.vae_model import VariationalAutoencoder
-
 import mlflow
-from torch.cuda import is_available
+import torch.cuda as cuda
+
+from vae.vae_model import VariationalAutoencoder
 
 
 def load_model(
@@ -13,7 +13,7 @@ def load_model(
     alpha: float,
     beta: float,
     target_label: Optional[int] = None,
-    cuda: bool = True,
+    use_cuda: bool = True,
 ) -> Tuple[Tuple[VariationalAutoencoder, str], mlflow.entities.Run]:
     """Loads the pytorch VAE model and mlflow run.
 
@@ -22,7 +22,8 @@ def load_model(
         z_dim (int): Dimension of latent space
         alpha (float): Alpha
         beta (float): Beta
-        cuda (bool): Use cuda if available
+        target_label (Optional[int]): Target labels, selects all if None
+        use_cuda (bool): Use cuda if available
 
     Returns:
         Tuple[Tuple[VariationalAutoencoder, str], mlflow.entities.Run]: (VAE, device), mlrun
@@ -39,7 +40,7 @@ def load_model(
         experiment_ids=[experiment_id], filter_string=filter_str
     ).iloc[0]
 
-    device = "cuda:0" if is_available() and cuda else "cpu"
+    device = "cuda:0" if cuda.is_available() and use_cuda else "cpu"
     print("Using device:", device)
 
     return (

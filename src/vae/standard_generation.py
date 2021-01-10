@@ -1,7 +1,4 @@
 """Data generation with convex hulls."""
-from utils import get_artifact_path, reshape_to_img
-from vae.model_setup import load_model
-
 import mlflow
 import numpy as np
 import torch
@@ -11,6 +8,9 @@ from sklearn.decomposition import PCA
 from torch.utils.data.dataloader import DataLoader
 from torchvision.datasets.mnist import MNIST
 from torchvision.transforms import ToTensor
+
+from utils import get_artifact_path, reshape_to_img
+from vae.model_setup import load_model
 
 # *** HYPERPARAMETERS ***
 
@@ -59,9 +59,7 @@ if TARGET_LABEL is not None:
         mnist, target_idx[torch.randint(0, target_idx.size(0), (N_SAMPLES,))]
     )
 else:
-    dataset = torch.utils.data.Subset(
-        mnist, torch.randint(0, len(mnist), (N_SAMPLES,))
-    )
+    dataset = torch.utils.data.Subset(mnist, torch.randint(0, len(mnist), (N_SAMPLES,)))
 dataloader = DataLoader(dataset, batch_size=512, shuffle=False)
 
 

@@ -1,12 +1,12 @@
 # noqa: D100
 from pathlib import Path
 
-from vae.evaluation.evaluation_setup import eval_setup
-from vae.vae_model_v1 import VariationalAutoencoder
-
 import torch
 from matplotlib import pyplot as plt
 from torch.utils.data.dataloader import DataLoader
+
+from vae.evaluation.evaluation_setup import eval_setup
+from vae.vae_model_v1 import VariationalAutoencoder
 
 
 def generate_from_test(

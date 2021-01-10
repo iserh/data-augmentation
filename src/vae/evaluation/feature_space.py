@@ -1,9 +1,6 @@
 # noqa: D100
 from pathlib import Path
 
-from vae.evaluation.evaluation_setup import eval_setup
-from vae.vae_model_v1 import VariationalAutoencoder
-
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -11,6 +8,9 @@ from scipy.spatial import ConvexHull
 from sklearn.covariance import EllipticEnvelope
 from sklearn.decomposition import PCA
 from torch.utils.data.dataloader import DataLoader
+
+from vae.evaluation.evaluation_setup import eval_setup
+from vae.vae_model_v1 import VariationalAutoencoder
 
 
 def visualize_feature_space(

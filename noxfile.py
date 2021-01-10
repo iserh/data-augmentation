@@ -4,12 +4,11 @@ import configparser
 import nox
 from nox.sessions import Session
 
-python_versions = ["3.7"]
+python_versions = ["3.9"]
 nox.options.sessions = "fmt", "lint"
 locations = (
     "src",
     "noxfile.py",
-    "pyproject_sort.py",
 )
 
 # load line length from flake8 config
