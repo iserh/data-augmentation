@@ -14,11 +14,11 @@ from vae.model_setup import load_model
 
 # *** HYPERPARAMETERS ***
 
-VAE_EPOCHS = 20
+VAE_EPOCHS = 50
 VAE_Z_DIM = 10
 VAE_ALPHA = 1.0
 VAE_BETA = 1.0
-VAE_N_EXAMPLES_LIMIT = None
+VAE_N_EXAMPLES_LIMIT = 500
 VAE_TARGET_LABELS = None
 
 N_SAMPLES = None
@@ -92,7 +92,6 @@ with torch.no_grad():
     variance_logs = torch.cat(variance_logs, dim=0).cpu()
     labels = torch.cat(labels, dim=0).numpy()
 
-unique_labels = np.unique(labels).astype('int')
 
 np.savetxt(artifact_path / "data" / "encoded_means.txt", means.numpy())
 np.savetxt(artifact_path / "data" / "encoded_labels.txt", labels)
@@ -105,6 +104,7 @@ else:
 means = means[random_indices]
 variance_logs = variance_logs[random_indices]
 generated_labels = labels[random_indices]
+unique_labels = np.unique(generated_labels).astype("int")
 
 np.savetxt(artifact_path / "data" / "gen_labels.txt", generated_labels)
 

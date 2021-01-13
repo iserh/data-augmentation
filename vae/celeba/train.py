@@ -13,8 +13,8 @@ from utils import get_artifact_path
 
 # *** Hyperparameters ***
 
-EPOCHS = 20
-Z_DIM = 10
+EPOCHS = 50
+Z_DIM = 64
 ALPHA = 1.0
 BETA = 1.0
 TARGET_LABELS = None

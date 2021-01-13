@@ -35,7 +35,7 @@ def dist_in_hull(points: np.ndarray, n: int) -> np.ndarray:
 # *** HYPERPARAMETERS ***
 
 VAE_EPOCHS = 20
-VAE_Z_DIM = 2
+VAE_Z_DIM = 10
 VAE_ALPHA = 1.0
 VAE_BETA = 1.0
 VAE_N_EXAMPLES_LIMIT = None
@@ -119,7 +119,7 @@ with torch.no_grad():
     means = torch.cat(means, dim=0).cpu().numpy()
     labels = torch.cat(labels, dim=0).numpy()
 
-unique_labels = np.unique(labels).astype('int')
+unique_labels = np.unique(labels).astype("int")
 
 np.savetxt(artifact_path / "data" / "encoded_means.txt", means)
 np.savetxt(artifact_path / "data" / "encoded_labels.txt", labels)

@@ -1,12 +1,12 @@
 # folders
-data
+analysis
+mlruns
 
 # dotfiles
 .vscode
 .nox
 .python-version
 **/.DS_Store
-mlruns
 
 # others
 **/__pycache__
