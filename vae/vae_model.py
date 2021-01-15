@@ -126,7 +126,6 @@ def vae_loss(
     x_true: Tensor,
     mean: Tensor,
     variance_log: Tensor,
-    alpha: float = 1.0,
     beta: float = 1.0,
 ) -> Tuple[Tensor, Tensor]:
     """Computes the vae loss.
@@ -136,12 +135,11 @@ def vae_loss(
         x_true: True image
         mean: Means of latent space
         variance_log: Variance logs of latent space
-        alpha: Regulates BinaryCrossEntropy part
         beta: Regulates KL-Divergence part
 
     Returns:
         BinaryCrossEntropy loss, KL-Divergence loss
     """
-    bce = alpha * F.binary_cross_entropy(x_hat, x_true) * 28 * 28
+    bce = F.binary_cross_entropy(x_hat, x_true) * 28 * 28
     kld = beta * (variance_log.exp() + mean ** 2 - 1 - variance_log).sum(-1).mean()
     return bce, kld

@@ -15,7 +15,7 @@ from torchvision.datasets.mnist import MNIST
 from torchvision.transforms import ToTensor
 
 from utils import get_artifact_path, reshape_to_img
-from vae.model_setup import load_model
+from vae.mnist.model_setup import load_model
 
 
 def dist_in_hull(points: np.ndarray, n: int) -> np.ndarray:
@@ -34,15 +34,15 @@ def dist_in_hull(points: np.ndarray, n: int) -> np.ndarray:
 
 # *** HYPERPARAMETERS ***
 
-VAE_EPOCHS = 20
-VAE_Z_DIM = 10
+VAE_EPOCHS = 50
+VAE_Z_DIM = 2
 VAE_ALPHA = 1.0
 VAE_BETA = 1.0
 VAE_N_EXAMPLES_LIMIT = None
 VAE_TARGET_LABELS = None
 
 N_EXAMPLES = None
-N_SAMPLES = 2000
+N_SAMPLES = 10_000
 OUTLIER_CONTAMINATION = 0.25
 
 

@@ -1,37 +1,27 @@
-from typing import Union
-from torch.utils.data.dataset import TensorDataset
-from torchvision.transforms import ToTensor
-from pathlib import Path
-from tqdm import tqdm
-from PIL import Image
 import torch
+from torchvision.datasets import CelebA
+from torchvision.transforms import ToTensor, Resize, Compose
 
+from utils.utils import TransformImage
 
-class CelebA(TensorDataset):
-
-    def __init__(self, root: Union[Path, str], train: bool = True, targets: bool = False) -> None:
-        # TODO: Load dataset from filesystem
-        self.root = Path(root)
-        fp = root / "img_align_celeba"
-        print(len(list(fp.iterdir())))
-        trans = ToTensor()
-
-        img_tensor = torch.cat([trans(Image.open(f)) for f in tqdm(list(fp.iterdir())[])], dim=0)
-        super().__init__(img_tensor)
-
-    def save(self):
-        torch.save(self.tensors, self.root / "img_align_celeba.pt")
-
-
-    
-
-
-dataset = CelebA(
-    root=Path.home() / "datasets",
-    train=True,
-    chunk_size=
+# Load dataset from torchvision
+data = CelebA(
+    root="~/torch_datasets",
+    transform=Compose([Resize((64, 64)), ToTensor()]),
+    split="train",
+    target_type="identity",
+    download=False,
 )
+# setup transform for visualization
+img_transform = TransformImage(channels=3, width=64, height=64, mode="RGB")
 
-dataset.save()
+# visualize a few examples
+rows, cols = 5, 10
+examples = torch.stack([data[i][0] for i in range(rows * cols)], dim=0)
+# transform to image
+img = img_transform(examples, rows, cols)
+# save image
+img.save("./examples.png")
 
-
+print(examples[0].max())
+print(examples[0].min())

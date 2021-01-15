@@ -10,15 +10,15 @@ from torchvision.datasets.mnist import MNIST
 from torchvision.transforms import ToTensor
 
 from utils import get_artifact_path, reshape_to_img
-from vae.model_setup import load_model
+from vae.mnist.model_setup import load_model
 
 # *** HYPERPARAMETERS ***
 
 VAE_EPOCHS = 50
-VAE_Z_DIM = 10
+VAE_Z_DIM = 2
 VAE_ALPHA = 1.0
 VAE_BETA = 1.0
-VAE_N_EXAMPLES_LIMIT = 500
+VAE_N_EXAMPLES_LIMIT = None
 VAE_TARGET_LABELS = None
 
 N_SAMPLES = None

@@ -121,10 +121,8 @@ means = (
 
 def draw_vector(v0, v1, ax=None, color=None):
     ax = ax or plt.gca()
-    arrowprops=dict(arrowstyle='->',
-                    linewidth=2,
-                    shrinkA=0, shrinkB=0, color=color)
-    ax.annotate('', v1, v0, arrowprops=arrowprops)
+    arrowprops = dict(arrowstyle="->", linewidth=2, shrinkA=0, shrinkB=0, color=color)
+    ax.annotate("", v1, v0, arrowprops=arrowprops)
 
 
 # plot encoded latent means
@@ -143,7 +141,7 @@ for i in range(5, 6, 1):
     for length, vector in zip(pca.explained_variance_, pca.components_):
         v = vector * 3 * np.sqrt(length)
         draw_vector(pca.mean_, pca.mean_ + v, color=get_cmap("tab10")(i))
-    plt.axis('equal')
+    plt.axis("equal")
 
 plt.legend()
 plt.savefig(artifact_path / "generated_z.png")

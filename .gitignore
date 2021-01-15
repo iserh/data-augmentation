@@ -1,6 +1,5 @@
 # folders
-analysis
-mlruns
+experiments
 
 # dotfiles
 .vscode
@@ -10,3 +9,4 @@ mlruns
 
 # others
 **/__pycache__
+cookie
