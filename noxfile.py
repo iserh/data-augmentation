@@ -4,13 +4,9 @@ import configparser
 import nox
 from nox.sessions import Session
 
-python_versions = ["3.9"]
+python_versions = ["3.8"]
 nox.options.sessions = "fmt", "lint"
-locations = (
-    "vae",
-    "utils",
-    "noxfile.py",
-)
+locations = ("vae", "utils", "noxfile.py", "mlflow_gc.py")
 
 # load line length from flake8 config
 config = configparser.ConfigParser()
@@ -48,7 +44,7 @@ def black(session: Session) -> None:
     """
     args = session.posargs or locations
     session.install("black")
-    session.run("black", "--line-length", f"{max_line_length}", *args)
+    session.run("black", *args)
 
 
 @nox.session(python=[python_versions])
@@ -84,5 +80,4 @@ def fmt(session: Session) -> None:
         *args,
     )
     session.run("python", "-m", "reindent", "-r", "-n", *args)
-    session.run("black", "--line-length", f"{max_line_length}", *args)
-    # session.run("poetry", "run", "python", "pyproject_sort.py", external=True)
+    session.run("black", *args)

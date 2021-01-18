@@ -19,28 +19,24 @@ class Encoder(nn.Module):
         """
         super(Encoder, self).__init__()
         self.conv_stage = nn.Sequential(
-            # input is (n_channels) x 64 x 64
+            # input is (n_channels) x 28 x 28
             nn.Conv2d(n_channels, 64, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (64) x 32 x 32
+            # state size. (64) x 14 x 14
             nn.Conv2d(64, 64 * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(64 * 2),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (64*2) x 16 x 16
-            nn.Conv2d(64 * 2, 64 * 4, 4, 2, 1, bias=False),
+            # state size. (64*2) x 7 x 7
+            nn.Conv2d(64 * 2, 64 * 4, 3, 2, 1, bias=False),
             nn.BatchNorm2d(64 * 4),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (64*4) x 8 x 8
-            nn.Conv2d(64 * 4, 64 * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(64 * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (64*8) x 4 x 4
+            # state size. (64*4) x 4 x 4
             nn.Flatten(),
         )
         # Encoder mean
-        self.mean = nn.Linear(64 * 8 * 4 * 4, z_dim)
+        self.mean = nn.Linear(64 * 4 * 4 * 4, z_dim)
         # Encoder Variance log
-        self.variance_log = nn.Linear(64 * 8 * 4 * 4, z_dim)
+        self.variance_log = nn.Linear(64 * 4 * 4 * 4, z_dim)
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         """Forward pass.
@@ -65,23 +61,19 @@ class Decoder(nn.Module):
             z_dim: Dimension of the latent space
         """
         super(Decoder, self).__init__()
-        self.linear_stage = nn.Linear(z_dim, 64 * 8 * 4 * 4)
+        self.linear_stage = nn.Linear(z_dim, 64 * 4 * 4 * 4)
         self.conv_stage = nn.Sequential(
-            # input is (64*8) x 4 x 4
-            nn.ConvTranspose2d(64 * 8, 64 * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(64 * 4),
-            nn.ReLU(True),
-            # state size. (64*4) x 8 x 8
-            nn.ConvTranspose2d(64 * 4, 64 * 2, 4, 2, 1, bias=False),
+            # input is (64*4) x 4 x 4
+            nn.ConvTranspose2d(64 * 4, 64 * 2, 3, 2, 1, bias=False),
             nn.BatchNorm2d(64 * 2),
             nn.ReLU(True),
-            # state size. (64*2) x 16 x 16
+            # state size. (64*2) x 7 x 7
             nn.ConvTranspose2d(64 * 2, 64, 4, 2, 1, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(True),
-            # state size. (64) x 32 x 32
+            # state size. (64) x 14 x 14
             nn.ConvTranspose2d(64, n_channels, 4, 2, 1, bias=False),
-            # state size. (n_channels) x 64 x 64
+            # state size. (n_channels) x 28 x 28
             nn.Sigmoid(),
         )
 
@@ -95,7 +87,7 @@ class Decoder(nn.Module):
             Reconstructed tensor
         """
         x = self.linear_stage(x)
-        x = x.view(x.size(0), 64 * 8, 4, 4)
+        x = x.view(x.size(0), 64 * 4, 4, 4)
         return self.conv_stage(x)
 
 

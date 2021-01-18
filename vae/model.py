@@ -132,3 +132,30 @@ class VariationalAutoencoder(nn.Module):
         x_hat = self.decoder(z)
         # return everything
         return x_hat, mean, variance_log, z
+
+
+class VAELoss:
+    def __init__(self, beta: float = 1.0) -> None:
+        self.beta = beta
+
+    def __call__(
+        self,
+        x_true: Tensor,
+        x_hat: Tensor,
+        mean: Tensor,
+        variance_log: Tensor,
+    ) -> Tuple[Tensor, Tensor]:
+        """Computes the vae loss.
+
+        Args:
+            x_true: True image
+            x_hat: Reconstructed image
+            mean: Means of latent space
+            variance_log: Variance logs of latent space
+
+        Returns:
+            BinaryCrossEntropy loss, KL-Divergence loss
+        """
+        bce = F.binary_cross_entropy(x_hat, x_true) * np.product(x_hat.size()[1:])
+        kld = self.beta * (variance_log.exp() + mean ** 2 - 1 - variance_log).sum(-1).mean()
+        return bce, kld
