@@ -20,12 +20,13 @@ class FeatureSpace:
         self.hparams = {"EPOCHS": epochs, "Z_DIM": z_dim, "BETA": beta}
         self._initialize_mlflow()
 
-    def load_model(self, epoch: Optional[int] = None, cuda: bool = True) -> None:
+    def load_model(self, epoch_chkpt: Optional[int] = None, cuda: bool = True) -> None:
+        mlflow.log_param("EPOCH_CHKPT", epoch_chkpt)
         # Use cuda if available
         self.device = "cuda:0" if cuda and torch.cuda.is_available() else "cpu"
         print("Using device:", self.device)
 
-        self.model = get_pretrained_model(epoch or self.hparams["EPOCHS"], **self.hparams).to(self.device)
+        self.model = get_pretrained_model(epoch_chkpt if epoch_chkpt is not None else self.hparams["EPOCHS"], **self.hparams).to(self.device)
 
     def encode(self, dataloader: DataLoader, n_samples: Optional[int] = None) -> torch.Tensor:
         # compute number of batches needed
@@ -103,16 +104,16 @@ if __name__ == "__main__":
 
     DATASET = "MNIST"
     EPOCHS = 100
-    CHKPT_EPOCH = EPOCHS
-    Z_DIM = 10
+    EPOCH_CHKPT = 100
+    Z_DIM = 2
     BETA = 1.0
     N_SAMPLES = None
 
     mlflow.set_tracking_uri(mlflow_roots[DATASET])
-    dataloader = get_dataloader(DATASET, train=False, shuffle=True)
+    dataloader = get_dataloader(DATASET, train=True, shuffle=True, batch_size=512)
 
     gen = FeatureSpace(epochs=EPOCHS, z_dim=Z_DIM, beta=BETA)
-    gen.load_model(epoch=CHKPT_EPOCH, cuda=True)
+    gen.load_model(EPOCH_CHKPT, cuda=True)
     gen.encode(dataloader, N_SAMPLES)
     gen.visualize_means(by_target=True)
 

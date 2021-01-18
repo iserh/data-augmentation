@@ -1,11 +1,11 @@
 """Variational autoencoder module class."""
 from typing import Tuple
 
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import Tensor
+
+from vae.model import init_weights
 
 
 class Encoder(nn.Module):
@@ -41,6 +41,11 @@ class Encoder(nn.Module):
         self.mean = nn.Linear(64 * 8 * 4 * 4, z_dim)
         # Encoder Variance log
         self.variance_log = nn.Linear(64 * 8 * 4 * 4, z_dim)
+
+        # initialize weights
+        self.conv_stage.apply(init_weights)
+        self.mean.apply(init_weights)
+        self.variance_log.apply(init_weights)
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         """Forward pass.
@@ -84,6 +89,10 @@ class Decoder(nn.Module):
             # state size. (n_channels) x 64 x 64
             nn.Sigmoid(),
         )
+
+        # initialize weights
+        self.linear_stage.apply(init_weights)
+        self.conv_stage.apply(init_weights)
 
     def forward(self, x: Tensor) -> Tensor:
         """Forward pass.
