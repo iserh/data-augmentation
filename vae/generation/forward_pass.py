@@ -27,7 +27,9 @@ class VAEGenerator:
         self.device = "cuda:0" if cuda and torch.cuda.is_available() else "cpu"
         print("Using device:", self.device)
 
-        self.model = get_pretrained_model(epoch_chkpt if epoch_chkpt is not None else self.hparams["EPOCHS"], **self.hparams).to(self.device)
+        self.model = get_pretrained_model(
+            epoch_chkpt if epoch_chkpt is not None else self.hparams["EPOCHS"], **self.hparams
+        ).to(self.device)
 
     def augment_single_example(self, dataloader: DataLoader, n_samples: int) -> Tuple[torch.Tensor, torch.Tensor]:
         mlflow.log_metric("single_augment_samples", n_samples)
@@ -165,9 +167,10 @@ def exit_hook():
 
 if __name__ == "__main__":
     import atexit
+
     atexit.register(exit_hook)
-    from vae.setup import get_dataloader
     from utils.config import mlflow_roots
+    from vae.setup import get_dataloader
 
     mlflow.set_tracking_uri("./experiments/CelebA")
 

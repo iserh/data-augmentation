@@ -50,11 +50,11 @@ class Encoder(nn.Module):
         # Encoder mean
         self.mean = nn.Linear(64 * 8 * 4 * 4, z_dim)
         # Encoder Variance log
-        self.variance_log = nn.Linear(64 * 8 * 4 * 4, z_dim)
+        self.log_var = nn.Linear(64 * 8 * 4 * 4, z_dim)
 
         # initialize weights
         self.conv_stage.apply(init_weights)
-        self.variance_log.apply(init_weights)
+        self.log_var.apply(init_weights)
         self.mean.apply(init_weights)
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
@@ -64,10 +64,10 @@ class Encoder(nn.Module):
             x: Input tensor
 
         Returns:
-            Mean, variance_log
+            Mean, log_var
         """
         x = self.conv_stage(x)
-        return self.mean(x), self.variance_log(x)
+        return self.mean(x), self.log_var(x)
 
 
 class Decoder(nn.Module):
@@ -140,17 +140,17 @@ class VariationalAutoencoder(nn.Module):
             x: Input tensor
 
         Returns:
-            Reconstructed tensor, mean, variance_log
+            Reconstructed tensor, mean, log_var
         """
         # encode input tensor
-        mean, variance_log = self.encoder(x)
+        mean, log_var = self.encoder(x)
         # reparameterization trick
-        eps = torch.empty_like(variance_log).normal_()
-        z = eps * (0.5 * variance_log).exp() + mean
+        eps = torch.empty_like(log_var).normal_()
+        z = eps * (0.5 * log_var).exp() + mean
         # decode latent tensor
         x_hat = self.decoder(z)
         # return everything
-        return x_hat, mean, variance_log, z
+        return x_hat, mean, log_var, z
 
 
 class VAELoss:
@@ -162,7 +162,7 @@ class VAELoss:
         x_true: Tensor,
         x_hat: Tensor,
         mean: Tensor,
-        variance_log: Tensor,
+        log_var: Tensor,
     ) -> Tuple[Tensor, Tensor]:
         """Computes the vae loss.
 
@@ -170,11 +170,16 @@ class VAELoss:
             x_true: True image
             x_hat: Reconstructed image
             mean: Means of latent space
-            variance_log: Variance logs of latent space
+            log_var: Variance logs of latent space
 
         Returns:
             BinaryCrossEntropy loss, KL-Divergence loss
         """
         bce = F.binary_cross_entropy(x_hat, x_true) * np.product(x_hat.size()[1:])
-        kld = self.beta * (variance_log.exp() + mean ** 2 - 1 - variance_log).sum(-1).mean()
+        kld = self.beta * (log_var.exp() + mean ** 2 - 1 - log_var).sum(-1).mean()
         return bce, kld
+
+
+if __name__ == "__main__":
+    vae = VariationalAutoencoder(20, 1)
+    print(sum([p.numel() for p in vae.parameters() if p.requires_grad]))

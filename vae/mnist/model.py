@@ -4,6 +4,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 from torch import Tensor
+
 from vae.model import init_weights
 
 

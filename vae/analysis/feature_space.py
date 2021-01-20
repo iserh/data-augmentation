@@ -26,7 +26,9 @@ class FeatureSpace:
         self.device = "cuda:0" if cuda and torch.cuda.is_available() else "cpu"
         print("Using device:", self.device)
 
-        self.model = get_pretrained_model(epoch_chkpt if epoch_chkpt is not None else self.hparams["EPOCHS"], **self.hparams).to(self.device)
+        self.model = get_pretrained_model(
+            epoch_chkpt if epoch_chkpt is not None else self.hparams["EPOCHS"], **self.hparams
+        ).to(self.device)
 
     def encode(self, dataloader: DataLoader, n_samples: Optional[int] = None) -> torch.Tensor:
         # compute number of batches needed

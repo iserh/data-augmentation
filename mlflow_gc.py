@@ -1,7 +1,8 @@
+"""Wrapper for running mlflow gc on all backend-store-uri's."""
 import os
 
-from utils.config import mlflow_roots
+from utils.mlflow_utils import Roots
 
-for root in mlflow_roots.values():
-    print(f"{root=}")
-    os.system(f"mlflow gc --backend-store-uri {root}")
+for root in Roots:
+    print(f"{root.value=}")
+    os.system(f"mlflow gc --backend-store-uri {root.value}")

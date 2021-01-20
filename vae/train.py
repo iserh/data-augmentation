@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
     DATASET = "MNIST"
     EPOCHS = 100
-    Z_DIM = 2
+    Z_DIM = 50
     BETA = 1.0
 
     mlflow.set_tracking_uri(mlflow_roots[DATASET])

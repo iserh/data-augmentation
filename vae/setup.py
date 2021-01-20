@@ -1,9 +1,9 @@
 """Config for training, analysing and generating."""
 from typing import Optional, Union
 
-from vae.celeba.dataloader import CelebALoader
+from vae.celeba.dataset import CelebALoader
 from vae.celeba.model import VariationalAutoencoder as CelebAVAE
-from vae.mnist.dataloader import MNISTLoader
+from vae.mnist.dataset import MNISTLoader
 from vae.mnist.model import VariationalAutoencoder as MNISTVAE
 
 

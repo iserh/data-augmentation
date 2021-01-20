@@ -22,8 +22,8 @@ def get_pretrained_model(epoch_chkpt: int, **hparams) -> VariationalAutoencoder:
     )
     try:
         run = mlflow.search_runs(experiment_ids=[experiment_id], filter_string=filter_str)
-        if 'tags.SELECT' in run:
-            run = run.loc[run['tags.SELECT'] == "True"].iloc[0]
+        if "tags.SELECT" in run:
+            run = run.loc[run["tags.SELECT"] == "True"].iloc[0]
         else:
             run = run.iloc[0]
     except IndexError:
@@ -37,6 +37,7 @@ def get_pretrained_model(epoch_chkpt: int, **hparams) -> VariationalAutoencoder:
 
 if __name__ == "__main__":
     from utils.config import mlflow_roots
+
     mlflow.set_tracking_uri(mlflow_roots["MNIST"])
     model = get_pretrained_model(0, EPOCHS=100, Z_DIM=2, BETA=1.0)
     print(model)
