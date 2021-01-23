@@ -129,7 +129,6 @@ class VariationalAutoencoder(nn.Module):
         """
         super(VariationalAutoencoder, self).__init__()
         self.code_paths = [__file__]
-        self.z_dim = z_dim
         self.encoder = Encoder(z_dim, n_channels)
         self.decoder = Decoder(z_dim, n_channels)
 
@@ -150,7 +149,7 @@ class VariationalAutoencoder(nn.Module):
         # decode latent tensor
         x_hat = self.decoder(z)
         # return everything
-        return x_hat, mean, log_var, z
+        return x_hat, mean, log_var
 
 
 class VAELoss:

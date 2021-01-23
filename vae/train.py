@@ -109,7 +109,7 @@ class VAETrainer:
 
     def _train_step(self, x_true: Tensor) -> Tuple[float, float]:
         # forward pass
-        x_hat, mean, log_variance, _ = self.model(x_true)
+        x_hat, mean, log_variance = self.model(x_true)
         # compute losses
         bce_l, dkl_l = self.loss(x_true, x_hat, mean, log_variance)
         # update parameters
@@ -122,7 +122,7 @@ class VAETrainer:
     @torch.no_grad()
     def _test_step(self, x_true: Tensor) -> Tuple[float, float]:
         # forward pass
-        x_hat, mean, log_variance, _ = self.model(x_true)
+        x_hat, mean, log_variance = self.model(x_true)
         # compute losses
         bce_l, dkl_l = self.loss(x_true, x_hat, mean, log_variance)
         # return losses

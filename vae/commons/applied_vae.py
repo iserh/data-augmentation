@@ -1,5 +1,6 @@
 """Containins functions, class for applying VAEs."""
-from typing import Tuple
+from typing import Tuple, Union
+
 import torch
 from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
@@ -13,22 +14,28 @@ class AppliedVAE:
     def __init__(self, model: VariationalAutoencoder, cuda: bool = True) -> None:
         self._load_model(model, cuda)
 
-    def encode_dataset(self, dataset: Dataset, shuffle: bool = False) -> LambdaDataset:
+    def encode_dataset(self, dataset: Dataset, shuffle: bool = False) -> LoaderDataset:
         """Decodes a dataset."""
         raw_loader = DataLoader(dataset, batch_size=512, num_workers=4, shuffle=shuffle)
-        loader_dataset = LoaderDataset(raw_loader)
-        return LambdaDataset(loader_dataset, BatchCollector(self._encode))
+        raw_set_batched = LoaderDataset(raw_loader)
+        encoded_set = LambdaDataset(raw_set_batched, BatchCollector(self._encode))
+        encoded_loader = DataLoader(encoded_set, batch_size=512, collate_fn=BatchCollector.collate_fn)
+        return LoaderDataset(encoded_loader)
 
-    def decode_dataset(self, dataset: Dataset, ) -> LambdaDataset:
+    def decode_dataset(
+        self,
+        dataset: Union[LoaderDataset, TensorDataset],
+    ) -> LoaderDataset:
         """Decodes a latent dataset."""
-        raw_loader = DataLoader(dataset, batch_size=512, collate_fn=BatchCollector.collate_fn)
-        loader_dataset = LoaderDataset(raw_loader)
-        return LambdaDataset(loader_dataset, BatchCollector(self._decode))
+        decoded_set = LambdaDataset(dataset, BatchCollector(self._decode))
+        decoded_loader = DataLoader(decoded_set, batch_size=512, collate_fn=BatchCollector.collate_fn)
+        return LoaderDataset(decoded_loader)
 
     @torch.no_grad()
     def _encode(self, x: Tensor, y: Tensor) -> Tuple[Tensor, Tensor]:
         """Encode an input tensor."""
-        return self.vae.encoder(x.to(self.device))[0].cpu(), y
+        m, log_v = self.vae.encoder(x.to(self.device))
+        return m.cpu(), log_v.cpu(), y
 
     @torch.no_grad()
     def _decode(self, z: Tensor, y: Tensor) -> Tuple[Tensor, Tensor]:
@@ -43,6 +50,7 @@ class AppliedVAE:
         print("Using device:", self.device)
         # Move model to device
         self.vae = model.to(self.device)
+        self.vae.eval()
 
 
 if __name__ == "__main__":
@@ -68,4 +76,3 @@ if __name__ == "__main__":
     decode_loader = DataLoader(decoded_dataset, batch_size=512, collate_fn=BatchCollector.collate_fn)
 
     print(next(iter(decode_loader))[0].size())
-    

@@ -1,14 +1,15 @@
 """Visualization functions."""
 from typing import Optional
-from utils.mlflow_utils import ExperimentTypes
 
 import mlflow
+import numpy as np
 import torch
+import torchvision.utils as vutils
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from torch import Tensor
-import numpy as np
-import torchvision.utils as vutils
+
+from utils.mlflow_utils import ExperimentTypes
 
 
 def visualize_latents(
@@ -22,13 +23,14 @@ def visualize_latents(
         latents = pca.transform(latents)
     # create pyplot figure and axes
     fig = plt.figure(figsize=(16, 16))
+    fig.patch.set_alpha(0.0)
     ax = fig.add_subplot(xlim=(-4, 4), ylim=(-4, 4))
     # plot latents to figure
     if color_by_target:
         targets_unique = torch.unique(targets, sorted=True).int().tolist()
         for t in targets_unique:
-            mask = targets[:, 0] == t
-            ax.scatter(*latents[mask].T, label=f"{t}")
+            mask = targets == t
+            ax.scatter(*latents[mask.reshape(-1)].T, label=f"{t}")
     else:
         ax.scatter(*latents.T, label="z")
     plt.legend()
@@ -36,27 +38,82 @@ def visualize_latents(
     plt.close()
 
 
-def visualize_real_fake_images(reals: Tensor, fakes: Tensor, n: int, img_name: str = "real_fake") -> None:
+def visualize_real_fake_images(
+    reals: Tensor,
+    fakes: Tensor,
+    n: int,
+    img_name: str = "real_fake",
+    k: Optional[int] = None,
+    indices: Optional[np.ndarray] = None,
+) -> None:
+    # k: number of generated fake images for each real image
+    k = k or 1
+    # if k > 1 duplicate reals corresponding to the amount of fakes
+    dupl_reals = reals.unsqueeze(1).expand((reals.size(0), k, *reals.size()[1:])).reshape(-1, *reals.size()[1:]) if k > 1 else reals
+
     fig = plt.figure(figsize=(15, 15))
+    fig.patch.set_alpha(0.0)
+    n_plots = 3 if indices is not None else 2
 
     # Plot the real images
-    plt.subplot(1, 2, 1)
+    plt.subplot(1, n_plots, 1)
     plt.axis("off")
     plt.title("Real Images")
-    plt.imshow(np.transpose(vutils.make_grid(reals[:n], padding=5, normalize=True, nrow=6), (1, 2, 0),))
+    plt.imshow(
+        np.transpose(
+            vutils.make_grid(dupl_reals[: n * k], padding=5, normalize=True, nrow=k * 2),
+            (1, 2, 0),
+        )
+    )
 
     # Plot the fake images
-    plt.subplot(1, 2, 2)
+    plt.subplot(1, n_plots, 2)
     plt.axis("off")
     plt.title("Fake Images")
-    plt.imshow(np.transpose(vutils.make_grid(fakes[:n], padding=5, normalize=True, nrow=6), (1, 2, 0),))
+    plt.imshow(
+        np.transpose(
+            vutils.make_grid(fakes[: n * k], padding=5, normalize=True, nrow=k * 2),
+            (1, 2, 0),
+        )
+    )
+
+    # plot the images that were used for generation
+    if indices is not None:
+        plt.subplot(1, n_plots, 3)
+        plt.axis("off")
+        plt.title("Images used for Generation")
+        plt.imshow(
+            np.transpose(
+                vutils.make_grid(reals[indices[: n * k]], padding=5, normalize=True, nrow=k * 2),
+                (1, 2, 0),
+            )
+        )
+
+    mlflow.log_figure(fig, img_name + ".png")
+    plt.close()
+
+
+def visualize_images(images: Tensor,n: int, img_name: str = "real_fake", rows: int = 10) -> None:
+    fig = plt.figure(figsize=(15, 15))
+    fig.patch.set_alpha(0.0)
+
+    # Plot the real images
+    plt.subplot(1, 1, 1)
+    plt.axis("off")
+    plt.title("Real Images")
+    plt.imshow(
+        np.transpose(
+            vutils.make_grid(images[: n], padding=5, normalize=True, nrow=rows),
+            (1, 2, 0),
+        )
+    )
 
     mlflow.log_figure(fig, img_name + ".png")
     plt.close()
 
 
 if __name__ == "__main__":
-    from utils.mlflow_utils import Roots, Experiment
+    from utils.mlflow_utils import Experiment, Roots
 
     mlflow.set_tracking_uri(Roots.TEST.value)
     exp = Experiment(ExperimentTypes.FeatureSpace)
