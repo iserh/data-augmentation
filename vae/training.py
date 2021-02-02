@@ -1,35 +1,37 @@
-"""Training script for variational autoencoder on mnist."""
-
+"""Trainer for VAEs."""
+from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import mlflow
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from utils import get_artifact_path
-from vae.model import VAELoss, VariationalAutoencoder
+from utils import uri_to_path
+from utils.data import Datasets
+from utils.integrations import BackendStore, ExperimentName
+from vae.loss import VAELoss
+from vae.models import MNISTVAE, VAEBaseModel
 
-mlflow_run_success = False
+
+@dataclass
+class VAETrainingArguments:
+    epochs: int
+    beta: float
+    save_intervall: Optional[int] = None
+    no_cuda: bool = False
 
 
 class VAETrainer:
-    """Trainer class for VAE training."""
-
-    def __init__(self, z_dim: int, beta: float) -> None:
-        """Initialize trainer. Set hyperparameters.
-
-        Args:
-            z_dim (int): Dimension of latent space
-            beta (float): beta for KL-Divergence regularizer
-        """
-        self.hparams = {"Z_DIM": z_dim, "BETA": beta}
-        self._initialize_mlflow()
-
-    def initialize_model(self, model: VariationalAutoencoder, cuda: bool = True) -> None:
+    def __init__(
+        self, args: VAETrainingArguments, model: VAEBaseModel, train_dataset: Dataset, eval_dataset: Dataset
+    ) -> None:
+        self.args = args
+        self.train_dataset = train_dataset
+        self.eval_dataset = eval_dataset
         # Use cuda if available
-        self.device = "cuda:0" if cuda and torch.cuda.is_available() else "cpu"
+        self.device = "cuda:0" if torch.cuda.is_available() and not args.no_cuda else "cpu"
         print("Using device:", self.device)
 
         # Model
@@ -37,22 +39,24 @@ class VAETrainer:
         # Optimizer
         self.optim = torch.optim.Adam(self.model.parameters(), weight_decay=5e-3)
         # Loss
-        self.loss = VAELoss(beta=self.hparams["BETA"])
+        self.criterion = VAELoss(beta=args.beta)
 
-    def train(self, train_loader: DataLoader, test_loader: DataLoader, epochs: int, save_every: Optional[int]) -> None:
-        # start new mlflow run
-        self.run = mlflow.start_run(experiment_id=self.experiment.experiment_id, run_name="training")
-        self.artifact_path = get_artifact_path(self.run)
-        # log hyperparameters
-        self.hparams["EPOCHS"] = epochs
-        mlflow.log_params(self.hparams)
+    def train(self) -> None:
+        # set output dir to the artifact path of the active run
+        output_dir = uri_to_path(mlflow.active_run().info.artifact_uri)
+        # log config
+        mlflow.log_params(self.args.__dict__)
+        mlflow.log_param("z_dim", self.model.z_dim)
+        # create dataloaders
+        train_loader = DataLoader(self.train_dataset, batch_size=128, shuffle=True, pin_memory=True, num_workers=4)
+        test_loader = DataLoader(self.eval_dataset, batch_size=512, shuffle=False, pin_memory=True, num_workers=4)
 
-        for e in range(epochs):
+        for e in range(self.args.epochs):
             # Training
             self.model.train()
             running_bce_l, running_dkl_l = 0, 0
             with tqdm(total=len(train_loader)) as pbar:
-                pbar.set_description(f"Train Epoch {e + 1}/{epochs}")
+                pbar.set_description(f"Train Epoch {e + 1}/{self.args.epochs}")
                 for step, (x_true, _) in enumerate(train_loader, start=1):
                     # train step, compute losses, backward pass
                     bce_l, dkl_l = self._train_step(x_true.to(self.device, non_blocking=True))
@@ -60,6 +64,7 @@ class VAETrainer:
                     running_dkl_l += dkl_l
                     # progress bar
                     pbar.set_postfix({"bce_l": running_bce_l / step, "dkl_l": running_dkl_l / step})
+                    mlflow.log_metric("epoch", e + 0.5 * step / len(train_loader))
                     pbar.update(1)
             # log loss metrics
             mlflow.log_metrics(
@@ -71,7 +76,7 @@ class VAETrainer:
             self.model.eval()
             running_bce_l, running_dkl_l = 0, 0
             with tqdm(total=len(test_loader)) as pbar:
-                pbar.set_description(f"Test Epoch {e + 1}/{epochs}")
+                pbar.set_description(f"Test Epoch {e + 1}/{self.args.epochs}")
                 for step, (x_true, _) in enumerate(test_loader, start=1):
                     # train step, compute losses
                     bce_l, dkl_l = self._test_step(x_true.to(self.device, non_blocking=True))
@@ -79,39 +84,33 @@ class VAETrainer:
                     running_dkl_l += dkl_l
                     # progress bar
                     pbar.set_postfix({"bce_l": running_bce_l / step, "dkl_l": running_dkl_l / step})
+                    mlflow.log_metric("epoch", e + 0.5 + 0.5 * step / len(test_loader))
                     pbar.update(1)
             # log loss metrics
             mlflow.log_metrics(
                 {"test_bce_l": running_bce_l / len(test_loader), "test_dkl_l": running_dkl_l / len(test_loader)}, step=e
             )
             # optional save model
-            if save_every and e % save_every == 0 and e != epochs:
+            if self.args.save_intervall and e % self.args.save_intervall == 0 and e != self.args.epochs and e > 0:
                 mlflow.pytorch.save_model(
                     self.model,
-                    self.artifact_path / f"model-epoch={e}",
+                    output_dir / f"models/model-epoch={e}",
                     code_paths=self.model.code_paths,
                 )
         # save final model
         mlflow.pytorch.save_model(
             self.model,
-            self.artifact_path / f"model-epoch={epochs}",
+            output_dir / f"models/model-epoch={self.args.epochs}",
             code_paths=self.model.code_paths,
         )
 
     # *** private functions ***
 
-    def _initialize_mlflow(self) -> None:
-        # initialize mlflow experiment
-        experiment_name = "VAE Training"
-        self.experiment = mlflow.get_experiment_by_name(experiment_name)
-        if not self.experiment:
-            self.experiment = mlflow.get_experiment(mlflow.create_experiment(experiment_name))
-
     def _train_step(self, x_true: Tensor) -> Tuple[float, float]:
         # forward pass
         x_hat, mean, log_variance = self.model(x_true)
         # compute losses
-        bce_l, dkl_l = self.loss(x_true, x_hat, mean, log_variance)
+        bce_l, dkl_l = self.criterion(x_hat, x_true, mean, log_variance)
         # update parameters
         self.optim.zero_grad()
         (bce_l + dkl_l).backward()
@@ -124,40 +123,36 @@ class VAETrainer:
         # forward pass
         x_hat, mean, log_variance = self.model(x_true)
         # compute losses
-        bce_l, dkl_l = self.loss(x_true, x_hat, mean, log_variance)
+        bce_l, dkl_l = self.criterion(x_hat, x_true, mean, log_variance)
         # return losses
         return bce_l.item(), dkl_l.item()
 
 
-# exit handling
-def exit_hook():
-    global mlflow_run_success
-    if mlflow_run_success:
-        mlflow.end_run()
-    else:
-        mlflow.end_run("KILLED")
+def train(args: VAETrainingArguments, z_dim: int, dataset: str) -> None:
+    # initialize mlflow experiment
+    mlflow.set_tracking_uri(BackendStore[dataset].value)
+    mlflow.set_experiment(ExperimentName.VAETrain.value)
+
+    # load train/test data
+    train_dataset = DATASETS[dataset](train=True)
+    eval_dataset = DATASETS[dataset](train=False)
+    # create vae model
+    model = MNISTVAE(z_dim)
+    # initialize trainer
+    trainer = VAETrainer(
+        args=args,
+        model=model,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+    )
+    # train model
+    with mlflow.start_run():
+        trainer.train()
 
 
 if __name__ == "__main__":
-    import atexit
-
-    from utils.config import mlflow_roots
-    from vae.setup import get_dataloader, get_model
-
-    atexit.register(exit_hook)
-
     DATASET = "MNIST"
-    EPOCHS = 100
-    Z_DIM = 50
-    BETA = 1.0
 
-    mlflow.set_tracking_uri(mlflow_roots[DATASET])
-    train_loader = get_dataloader(DATASET, train=True)
-    test_loader = get_dataloader(DATASET, train=False)
-    model = get_model(DATASET, Z_DIM)
-
-    vt = VAETrainer(Z_DIM, BETA)
-    vt.initialize_model(model, cuda=True)
-    vt.train(train_loader, test_loader, EPOCHS, save_every=20)
-
-    mlflow_run_success = True
+    for z_dim in [10, 20, 50, 100]:
+        training_args = VAETrainingArguments(epochs=100, beta=1.0, save_intervall=20)
+        train(training_args, z_dim, DATASET)

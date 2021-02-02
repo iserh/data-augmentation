@@ -9,7 +9,7 @@ from torch.utils.data._utils.collate import default_collate
 class BatchCollector:
     """TODO: better message: Always pass tensors to BatchCollector"""
 
-    def __init__(self, apply_fn: Callable) -> None:
+    def __init__(self, apply_fn: Callable, k: int = 1) -> None:
         self.data = []  # collects all data the data
         self.apply = apply_fn
 

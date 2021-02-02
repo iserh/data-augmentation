@@ -1,16 +1,11 @@
 """Data generation by running forward pass through net."""
 from typing import Tuple
-from vae.commons.visualization import visualize_images
-from vae.commons.applied_vae import AppliedVAE
-from sklearn.decomposition import PCA
 
+import numpy as np
 import torch
+from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 from torch import Tensor
-from torch.utils.data.dataset import TensorDataset
-import numpy as np
-
-from utils.data.dataset import LoaderDataset
 
 
 class Interpolation:
@@ -26,8 +21,8 @@ class Interpolation:
         _, indices = nbrs.kneighbors(z)
         # generate k new latents for each original latent vector
         # by interpolating between the k'th nearest neighbour
-        z_ = torch.empty((z.size(0), self.k, *z.size()[1:]), device=z.device)
-        y_ = torch.empty((y.size(0), self.k, *y.size()[1:]), device=y.device)
+        z_ = torch.empty((z.size(0), self.k, *z.size()[1:]), device=z.device, dtype=z.dtype)
+        y_ = torch.empty((y.size(0), self.k, *y.size()[1:]), device=y.device, dtype=y.dtype)
         for i in range(z.size(0)):
             # each latent vector generates 'n_neighbor' new latent vectors
             for j, k in enumerate(indices[i]):
@@ -35,11 +30,13 @@ class Interpolation:
                 z_[i, j] = (z[k] - z[i]) * self.alpha + z[i]
                 # save the target too
                 y_[i, j] = y[i]
+        z_ = z_.reshape(-1, z.size(-1))
+        y_ = y_.flatten()
         # return new modified latents and the corresponding targets as tensors
-        return (z_, y_, indices) if self.return_indices else (z_, y_)
+        return (z_, y_, indices.reshape(-1)) if self.return_indices else (z_, y_)
 
 
-def interpolate_along_dimension(latents: Tensor, targets: Tensor, n_steps: int) -> Tensor:
+def interpolate_along_class(latents: Tensor, targets: Tensor, n_steps: int) -> Tensor:
     unique_targets = torch.unique(targets, sorted=True).tolist()
     interpolated, corresponding_targets = [], []
     for i in unique_targets:
@@ -53,31 +50,39 @@ def interpolate_along_dimension(latents: Tensor, targets: Tensor, n_steps: int) 
     return torch.cat(interpolated, dim=0), torch.cat(corresponding_targets, dim=0)
 
 
+def interpolate_along_dimension(z: Tensor, n_steps: int) -> Tensor:
+    interpolated = []
+    for dim in range(z.size(0)):
+        other_dims = z.unsqueeze(0).expand((n_steps, z.size(0))).clone()
+        x = np.linspace(z[dim] - 3, z[dim] + 3, n_steps)
+        other_dims[:, dim] = torch.Tensor(x)
+        interpolated.append(other_dims)
+    return torch.cat(interpolated, dim=0)
+
 
 if __name__ == "__main__":
     import mlflow
+    from core.data import MNIST_Dataset
     from torch.utils.data import DataLoader, TensorDataset
 
-    from utils.mlflow_utils import Experiment, ExperimentTypes, Roots, get_run, load_pytorch_model
-    from vae.commons.applied_vae import AppliedVAE
-    from vae.commons.visualization import visualize_latents, visualize_real_fake_images
-    from vae.mnist.dataset import MNISTWrapper
+    from utils.data import LoaderDataset
+    from utils.integrations import BackendStore, ExperimentName
+    from vae.applied_vae import VAEForDataAugmentation
+    from vae.models import MNISTVAE, VAEConfig
+    from vae.visualization import visualize_images, visualize_latents, visualize_real_fake_images
 
-    hparams = {
-        "EPOCHS": 100,
-        "Z_DIM": 20,
-        "BETA": 1.0,
-    }
     DATASET = "MNIST"
-    N_SAMPLES = 10000
+    N_SAMPLES = 256
     K = 3
     ALPHA = 0.5
 
-    mlflow.set_tracking_uri(Roots.MNIST.value)
+    mlflow.set_tracking_uri(BackendStore[DATASET].value)
+    mlflow.set_experiment(ExperimentName.VAEGeneration.value)
 
-    dataset = MNISTWrapper()
-    model = load_pytorch_model(get_run(ExperimentTypes.VAETraining, **hparams), chkpt=hparams["EPOCHS"])
-    vae = AppliedVAE(model, cuda=True)
+    dataset = MNIST_Dataset()
+    vae_config = VAEConfig(epochs=5, checkpoint=5, z_dim=2, beta=1.0)
+    model = MNISTVAE.from_pretrained(vae_config)
+    vae = VAEForDataAugmentation(model)
 
     fetch_loader = DataLoader(dataset, batch_size=512, num_workers=4, shuffle=False)
     fetched_set = LoaderDataset(fetch_loader)
@@ -88,32 +93,34 @@ if __name__ == "__main__":
     encoded_fetch = vae.encode_dataset(loaded_dataset)
     encoded_fetcher = DataLoader(encoded_fetch, batch_size=N_SAMPLES)
 
-    with Experiment(ExperimentTypes.VAEGeneration).new_run("interpolation") as run:
-        mlflow.log_params(hparams)
+    with mlflow.start_run(run_name="interpolation"):
+        mlflow.log_params(vae_config.__dict__)
         mlflow.log_params({"ALPHA": ALPHA, "K": K})
         mlflow.log_metric("N_SAMPLES", N_SAMPLES)
         print("Encoding")
-        latents, _, targets = next(iter(encoded_fetcher))
+        latents, targets = next(iter(encoded_fetcher))
         pca = PCA(2).fit(latents) if latents.size(1) > 2 else None
         visualize_latents(latents, pca, targets, color_by_target=True, img_name="encoded")
 
         print("Interpolating")
         interpolation = Interpolation(alpha=ALPHA, k=K, return_indices=True)
         inter_latents, inter_targets, indices = interpolation(latents, targets)
-        inter_latents = inter_latents.reshape(-1, inter_latents.size(-1))
-        inter_targets = inter_targets.reshape(-1, inter_targets.size(-1))
-        indices = indices.reshape(-1)
         visualize_latents(inter_latents, pca, inter_targets, color_by_target=True, img_name="interpolated")
 
         fakes_set = vae.decode_dataset(TensorDataset(inter_latents, inter_targets))
         fakes_loader = DataLoader(fakes_set, batch_size=20 * K)
 
         print("Real - Fake")
-        visualize_real_fake_images(reals, next(iter(fakes_loader))[0], n=20, k=K, indices=None)
+        visualize_real_fake_images(reals, next(iter(fakes_loader))[0], n=20, k=K, indices=indices)
 
-        print("Interpolation across dimension")
-        inter_dataset = TensorDataset(*interpolate_along_dimension(latents, targets, 20))
+        print("Interpolation across class")
+        inter_dataset = TensorDataset(*interpolate_along_class(latents, targets, n_steps=20))
         decoded_loader = DataLoader(vae.decode_dataset(inter_dataset), batch_size=20)
         for i, (x_, _) in enumerate(decoded_loader):
-            visualize_images(x_, n=x_.size(0), rows=x_.size(0), img_name=f"interpolated-{i}")
+            visualize_images(x_, n=x_.size(0), rows=x_.size(0), img_name=f"interpolated-class-{i}")
 
+        print("Interpolation across dimension")
+        inter_dataset = TensorDataset(interpolate_along_dimension(latents[0], n_steps=20))
+        decoded_loader = DataLoader(vae.decode_dataset(inter_dataset), batch_size=20)
+        for i, (x_,) in enumerate(decoded_loader):
+            visualize_images(x_, n=x_.size(0), rows=x_.size(0), img_name=f"interpolated-dim-{i}")

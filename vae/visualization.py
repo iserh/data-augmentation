@@ -9,8 +9,6 @@ from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from torch import Tensor
 
-from utils.mlflow_utils import ExperimentTypes
-
 
 def visualize_latents(
     latents: Tensor,
@@ -29,8 +27,8 @@ def visualize_latents(
     if color_by_target:
         targets_unique = torch.unique(targets, sorted=True).int().tolist()
         for t in targets_unique:
-            mask = targets == t
-            ax.scatter(*latents[mask.reshape(-1)].T, label=f"{t}")
+            mask = targets.flatten() == t
+            ax.scatter(*latents[mask].T, label=f"{t}")
     else:
         ax.scatter(*latents.T, label="z")
     plt.legend()
@@ -49,7 +47,11 @@ def visualize_real_fake_images(
     # k: number of generated fake images for each real image
     k = k or 1
     # if k > 1 duplicate reals corresponding to the amount of fakes
-    dupl_reals = reals.unsqueeze(1).expand((reals.size(0), k, *reals.size()[1:])).reshape(-1, *reals.size()[1:]) if k > 1 else reals
+    dupl_reals = (
+        reals.unsqueeze(1).expand((reals.size(0), k, *reals.size()[1:])).reshape(-1, *reals.size()[1:])
+        if k > 1
+        else reals
+    )
 
     fig = plt.figure(figsize=(15, 15))
     fig.patch.set_alpha(0.0)
@@ -93,7 +95,7 @@ def visualize_real_fake_images(
     plt.close()
 
 
-def visualize_images(images: Tensor,n: int, img_name: str = "real_fake", rows: int = 10) -> None:
+def visualize_images(images: Tensor, n: int, img_name: str = "real_fake", rows: int = 10) -> None:
     fig = plt.figure(figsize=(15, 15))
     fig.patch.set_alpha(0.0)
 
@@ -103,7 +105,7 @@ def visualize_images(images: Tensor,n: int, img_name: str = "real_fake", rows: i
     plt.title("Real Images")
     plt.imshow(
         np.transpose(
-            vutils.make_grid(images[: n], padding=5, normalize=True, nrow=rows),
+            vutils.make_grid(images[:n], padding=5, normalize=True, nrow=rows),
             (1, 2, 0),
         )
     )
@@ -113,12 +115,12 @@ def visualize_images(images: Tensor,n: int, img_name: str = "real_fake", rows: i
 
 
 if __name__ == "__main__":
-    from utils.mlflow_utils import Experiment, Roots
+    from utils.integrations import BackendStore, ExperimentName
 
-    mlflow.set_tracking_uri(Roots.TEST.value)
-    exp = Experiment(ExperimentTypes.FeatureSpace)
+    mlflow.set_tracking_uri(BackendStore.MNIST.value)
+    mlflow.set_experiment(ExperimentName.FeatureSpace.value)
 
-    with exp.new_run("test") as run:
+    with mlflow.start_run():
         latents = torch.empty((200, 2)).normal_(1, 1)
         pca = PCA(2).fit(latents) if latents.size(1) > 0 else None
         visualize_latents(latents, pca)
