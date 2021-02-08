@@ -6,12 +6,12 @@ from torch import Tensor
 
 from utils import init_weights
 
-from .base_model import DecoderBaseModel, EncoderBaseModel, VAEBaseModel, VAEConfig, load_pretrained_model
+from .base import Encoder, Decoder, VAEConfig, VAEModel
 
 
-class MNISTEncoder(EncoderBaseModel):
+class EncoderV1(Encoder):
     def __init__(self, z_dim: int, nc: int) -> None:
-        super().__init__(z_dim, nc)
+        super().__init__()
         self.conv_stage = nn.Sequential(
             # input is (n_channels) x 28 x 28
             nn.Conv2d(nc, 64, 4, 2, 1, bias=False),
@@ -42,9 +42,9 @@ class MNISTEncoder(EncoderBaseModel):
         return self.mean(x), self.variance_log(x)
 
 
-class MNISTDecoder(DecoderBaseModel):
+class DecoderV1(Decoder):
     def __init__(self, z_dim: int, nc: int) -> None:
-        super().__init__(z_dim, nc)
+        super().__init__()
         self.linear_stage = nn.Linear(z_dim, 64 * 4 * 4 * 4)
         self.conv_stage = nn.Sequential(
             # input is (64*4) x 4 x 4
@@ -71,13 +71,9 @@ class MNISTDecoder(DecoderBaseModel):
         return self.conv_stage(x)
 
 
-class MNISTVAE(VAEBaseModel):
-    def __init__(self, z_dim: int) -> None:
-        super().__init__(z_dim)
+class VAEModelV1(VAEModel):
+    def __init__(self, config: VAEConfig) -> None:
+        super().__init__(config)
         self.code_paths.append(__file__)
-        self.encoder = MNISTEncoder(z_dim, nc=1)
-        self.decoder = MNISTDecoder(z_dim, nc=1)
-
-    @staticmethod
-    def from_pretrained(config: VAEConfig) -> "MNISTVAE":
-        return load_pretrained_model(config)
+        self.encoder = EncoderV1(self.config.z_dim, nc=1)
+        self.decoder = DecoderV1(self.config.z_dim, nc=1)

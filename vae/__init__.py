@@ -1,6 +1,5 @@
 """Evaluating Variational Autoencoders for Data Augmentation."""
-from .applied_vae import VAEForDataAugmentation  # noqa: F401
 from .generation import Interpolation, Noise  # noqa: F401
-from .loss import VAELoss  # noqa: F401
-from .models import MNISTVAE, CelebAVAE, VAEBaseModel, VAEConfig  # noqa: F401
-from .training import VAETrainer  # noqa: F401
+from .models import VAEModel, VAEConfig, VAEForDataAugmentation  # noqa: F401
+from .trainer import VAETrainer  # noqa: F401
+from .visualization import visualize_images, visualize_real_fake_images, visualize_latents  # noqa: F401

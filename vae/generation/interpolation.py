@@ -15,8 +15,8 @@ class Interpolation:
         self.return_indices = return_indices
 
     def __call__(self, z: Tensor, y: Tensor) -> Tuple[Tensor, Tensor]:
-        # build nearest neighbour tree
-        nbrs = NearestNeighbors(n_neighbors=self.k, algorithm="ball_tree").fit(z)
+        # build nearest neighbour tree, k + 1 because the first neighbour is the point itself
+        nbrs = NearestNeighbors(n_neighbors=self.k + 1, algorithm="ball_tree").fit(z)
         # get indices of k nearest neighbours for each latent vector
         _, indices = nbrs.kneighbors(z)
         # generate k new latents for each original latent vector
@@ -25,11 +25,12 @@ class Interpolation:
         y_ = torch.empty((y.size(0), self.k, *y.size()[1:]), device=y.device, dtype=y.dtype)
         for i in range(z.size(0)):
             # each latent vector generates 'n_neighbor' new latent vectors
-            for j, k in enumerate(indices[i]):
+            for j, k in enumerate(indices[i][1:]):
                 # interpolate between latent vector and the k'th nearest neighbour
                 z_[i, j] = (z[k] - z[i]) * self.alpha + z[i]
                 # save the target too
                 y_[i, j] = y[i]
+        # reshape
         z_ = z_.reshape(-1, z.size(-1))
         y_ = y_.flatten()
         # return new modified latents and the corresponding targets as tensors

@@ -56,6 +56,7 @@ def load_pytorch_model(experiment_name: Union[ExperimentName, str], config: Pret
     # convert config to dict and remove checkpoint key (cause it's no mlflow param)
     run_params = dict(config.__dict__)
     del run_params["checkpoint"]
+    del run_params["compute_loss"]
     # get the run
     run = get_run(experiment_name, **run_params)
     # load the model and return it

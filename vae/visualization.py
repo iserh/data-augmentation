@@ -43,6 +43,7 @@ def visualize_real_fake_images(
     img_name: str = "real_fake",
     k: Optional[int] = None,
     indices: Optional[np.ndarray] = None,
+    cols: int = 10
 ) -> None:
     # k: number of generated fake images for each real image
     k = k or 1
@@ -63,7 +64,7 @@ def visualize_real_fake_images(
     plt.title("Real Images")
     plt.imshow(
         np.transpose(
-            vutils.make_grid(dupl_reals[: n * k], padding=5, normalize=True, nrow=k * 2),
+            vutils.make_grid(dupl_reals[: n * k], padding=5, normalize=True, nrow=cols or k * 2),
             (1, 2, 0),
         )
     )
@@ -74,7 +75,7 @@ def visualize_real_fake_images(
     plt.title("Fake Images")
     plt.imshow(
         np.transpose(
-            vutils.make_grid(fakes[: n * k], padding=5, normalize=True, nrow=k * 2),
+            vutils.make_grid(fakes[: n * k], padding=5, normalize=True, nrow=cols or k * 2),
             (1, 2, 0),
         )
     )
@@ -86,7 +87,7 @@ def visualize_real_fake_images(
         plt.title("Images used for Generation")
         plt.imshow(
             np.transpose(
-                vutils.make_grid(reals[indices[: n * k]], padding=5, normalize=True, nrow=k * 2),
+                vutils.make_grid(reals[indices[: n * k]], padding=5, normalize=True, nrow=cols or k * 2),
                 (1, 2, 0),
             )
         )
@@ -95,7 +96,7 @@ def visualize_real_fake_images(
     plt.close()
 
 
-def visualize_images(images: Tensor, n: int, img_name: str = "real_fake", rows: int = 10) -> None:
+def visualize_images(images: Tensor, n: int, img_name: str = "images", cols: int = 10) -> None:
     fig = plt.figure(figsize=(15, 15))
     fig.patch.set_alpha(0.0)
 
@@ -105,7 +106,7 @@ def visualize_images(images: Tensor, n: int, img_name: str = "real_fake", rows: 
     plt.title("Real Images")
     plt.imshow(
         np.transpose(
-            vutils.make_grid(images[:n], padding=5, normalize=True, nrow=rows),
+            vutils.make_grid(images[:n], padding=5, normalize=True, nrow=cols),
             (1, 2, 0),
         )
     )
