@@ -5,8 +5,8 @@ import nox
 from nox.sessions import Session
 
 python_versions = ["3.8"]
-nox.options.sessions = "fmt", "lint"
-locations = ("vae", "utils", "noxfile.py", "mlflow_gc.py")
+nox.options.sessions = "format", "lint"
+locations = ("src", "noxfile.py")
 
 # load line length from flake8 config
 config = configparser.ConfigParser()
@@ -60,7 +60,7 @@ def isort(session: Session) -> None:
 
 
 @nox.session(python=[python_versions])
-def fmt(session: Session) -> None:
+def format(session: Session) -> None:
     """Autoformat project using black and isort.
 
     Args:

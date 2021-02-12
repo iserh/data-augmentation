@@ -1,14 +1,14 @@
 """Train VAE example."""
-from vae import VAETrainer
-from utils.trainer import TrainingArguments
-from vae.models.architectures import VAEModelV1
-from vae.models import VAEForDataAugmentation, VAEConfig
-from vae.visualization import visualize_latents, visualize_real_fake_images, visualize_images
-from sklearn.decomposition import PCA
 import mlflow
-
 import torch
-from torch.utils.data import DataLoader, TensorDataset, Dataset
+from sklearn.decomposition import PCA
+from torch.utils.data import DataLoader, Dataset, TensorDataset
+
+from utils.trainer import TrainingArguments
+from vae import VAETrainer
+from vae.models import VAEConfig, VAEForDataAugmentation
+from vae.models.architectures import VAEModelV1
+from vae.visualization import visualize_images, visualize_latents, visualize_real_fake_images
 
 
 def train_vae(training_args: TrainingArguments, train_dataset: Dataset, test_dataset: Dataset, vae_config: VAEConfig):
@@ -51,7 +51,12 @@ def train_vae(training_args: TrainingArguments, train_dataset: Dataset, test_dat
 
             encoded = vae.encode_dataset(test_dataset)
             fakes = vae.decode_dataset(TensorDataset(encoded.tensors[0], encoded.tensors[1])).tensors[0]
-            visualize_latents(encoded.tensors[0], pca=PCA(2).fit(encoded.tensors[0]), targets=test_dataset.tensors[1], color_by_target=True)
+            visualize_latents(
+                encoded.tensors[0],
+                pca=PCA(2).fit(encoded.tensors[0]),
+                targets=test_dataset.tensors[1],
+                color_by_target=True,
+            )
             visualize_real_fake_images(test_dataset.tensors[0], fakes, n=50, cols=8)
 
             # random images
@@ -63,11 +68,11 @@ def train_vae(training_args: TrainingArguments, train_dataset: Dataset, test_dat
 
 
 if __name__ == "__main__":
-    from utils.mlflow import backend_stores
     from utils.data import Datasets
+    from utils.mlflow import backend_stores
 
     DATASET = "MNIST"
-    
+
     mlflow.set_tracking_uri(getattr(backend_stores, DATASET))
 
     vae_config = VAEConfig(z_dim=10, beta=1.0)
@@ -77,7 +82,7 @@ if __name__ == "__main__":
         epochs=15,
         seed=1337,
     )
-    
+
     train_dataset = Datasets(DATASET, train=True)
     test_dataset = Datasets(DATASET, train=False)
 

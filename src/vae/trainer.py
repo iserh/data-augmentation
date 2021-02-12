@@ -1,13 +1,14 @@
 """VAE Trainer."""
 from typing import Dict
-from utils.trainer import Trainer
+
+import mlflow
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-import mlflow
+
+from utils.trainer import Trainer
 
 
 class VAETrainer(Trainer):
-
     def train_epoch(self, epoch: int, train_loader: DataLoader, pbar: tqdm) -> Dict[str, float]:
         self.model.train()
         running_bce_l, running_kl_l = 0, 0
@@ -26,7 +27,7 @@ class VAETrainer(Trainer):
             "train_bce_l": running_bce_l / len(train_loader),
             "train_kl_l": running_kl_l / len(train_loader),
         }
-    
+
     def test_epoch(self, epoch: int, test_loader: DataLoader, pbar: tqdm) -> Dict[str, float]:
         self.model.eval()
         running_bce_l, running_kl_l = 0, 0

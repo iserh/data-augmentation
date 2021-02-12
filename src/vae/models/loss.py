@@ -1,5 +1,6 @@
 """Variational autoencoder loss criterion."""
 from typing import Tuple
+
 import numpy as np
 import torch.nn as nn
 from torch import Tensor
@@ -9,10 +10,10 @@ class VAELossOutput:
     def __init__(self, r_loss: Tensor, kl_loss: Tensor) -> None:
         self.r_loss = r_loss
         self.kl_loss = kl_loss
-    
+
     def backward(self) -> None:
         (self.r_loss + self.kl_loss).backward()
-    
+
     def item(self) -> Tuple[float, float]:
         return self.r_loss.item(), self.kl_loss.item()
 

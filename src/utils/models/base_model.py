@@ -1,6 +1,7 @@
+import torch.nn as nn
+
 from .model_config import ModelConfig
 from .model_output import ModelOutput
-import torch.nn as nn
 
 
 class BaseModel(nn.Module):

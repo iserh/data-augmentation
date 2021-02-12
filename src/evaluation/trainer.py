@@ -1,15 +1,16 @@
 """Trainer for CNNs."""
+from dataclasses import dataclass
 from typing import Dict, Optional
-from utils import uri_to_path
-from torch.utils.data import DataLoader, Dataset
 
 import mlflow
 import torch
-from torch import Tensor
-from tqdm import tqdm
 import torch.nn as nn
-from sklearn.metrics import f1_score, accuracy_score
-from dataclasses import dataclass
+from sklearn.metrics import accuracy_score, f1_score
+from torch import Tensor
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
+
+from utils import uri_to_path
 
 
 @dataclass
@@ -20,8 +21,14 @@ class TrainingArguments:
 
 
 class Trainer:
-
-    def __init__(self, args: TrainingArguments, model: nn.Module, train_dataset: Dataset, test_dataset: Dataset, eval_dataset: Optional[Dataset] = None) -> None:
+    def __init__(
+        self,
+        args: TrainingArguments,
+        model: nn.Module,
+        train_dataset: Dataset,
+        test_dataset: Dataset,
+        eval_dataset: Optional[Dataset] = None,
+    ) -> None:
         # copy training arguments
         self.args = args
         # train dataset, test dataset
@@ -59,16 +66,20 @@ class Trainer:
                 predictions, targets = torch.LongTensor([]), torch.LongTensor([])
                 for step, (x, y) in enumerate(train_loader, start=1):
                     # train step, compute losses, backward pass
-                    loss, pred = self._train_step(x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True))
+                    loss, pred = self._train_step(
+                        x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True)
+                    )
                     running_loss += loss
                     predictions = torch.cat([predictions, pred], dim=0)
                     targets = torch.cat([targets, y.flatten()], dim=0)
                     # progress bar
-                    pbar.set_postfix({
-                        "loss": running_loss / step,
-                        "acc": accuracy_score(targets, predictions),
-                        "f1": f1_score(targets, predictions, average="weighted"),
-                    })
+                    pbar.set_postfix(
+                        {
+                            "loss": running_loss / step,
+                            "acc": accuracy_score(targets, predictions),
+                            "f1": f1_score(targets, predictions, average="weighted"),
+                        }
+                    )
                     pbar.update(1)
                 # log loss metrics
                 mlflow.log_metrics(
@@ -84,19 +95,25 @@ class Trainer:
                 self.model.eval()
                 running_loss = 0
                 predictions, targets = torch.LongTensor([]), torch.LongTensor([])
-                with tqdm(total=len(test_loader), desc=f"Dev test epoch {e + 1}/{self.args.epochs}", leave=False) as eval_pbar:
+                with tqdm(
+                    total=len(test_loader), desc=f"Dev test epoch {e + 1}/{self.args.epochs}", leave=False
+                ) as eval_pbar:
                     for step, (x, y) in enumerate(test_loader, start=1):
                         # train step, compute losses, backward pass
-                        loss, pred = self._test_step(x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True))
+                        loss, pred = self._test_step(
+                            x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True)
+                        )
                         running_loss += loss
                         predictions = torch.cat([predictions, pred], dim=0)
                         targets = torch.cat([targets, y.flatten()], dim=0)
                         # progress bar
-                        eval_pbar.set_postfix({
-                            "loss": running_loss / step,
-                            "acc": accuracy_score(targets, predictions),
-                            "f1": f1_score(targets, predictions, average="weighted"),
-                        })
+                        eval_pbar.set_postfix(
+                            {
+                                "loss": running_loss / step,
+                                "acc": accuracy_score(targets, predictions),
+                                "f1": f1_score(targets, predictions, average="weighted"),
+                            }
+                        )
                         eval_pbar.update(1)
                 # log loss metrics
                 mlflow.log_metrics(
@@ -108,7 +125,12 @@ class Trainer:
                     step=e,
                 )
                 # optional save model
-                if self.args.save_model and self.args.save_intervall and e % self.args.save_intervall == 0 and e != self.args.epochs:
+                if (
+                    self.args.save_model
+                    and self.args.save_intervall
+                    and e % self.args.save_intervall == 0
+                    and e != self.args.epochs
+                ):
                     mlflow.pytorch.save_model(
                         self.model,
                         output_dir / f"models/model-epoch={e}",
@@ -121,7 +143,7 @@ class Trainer:
                     output_dir / f"models/model-epoch={self.args.epochs}",
                     code_paths=self.model.code_paths,
                 )
-    
+
     def evaluate(self) -> Dict[str, float]:
         mlflow.log_params({"eval_dataset_size": len(self.eval_dataset)})
         # create dataloaders
@@ -139,11 +161,13 @@ class Trainer:
                 predictions = torch.cat([predictions, pred], dim=0)
                 targets = torch.cat([targets, y.flatten()], dim=0)
                 # progress bar
-                pbar.set_postfix({
-                    "loss": running_loss / step,
-                    "acc": accuracy_score(targets, predictions),
-                    "f1": f1_score(targets, predictions, average="weighted"),
-                })
+                pbar.set_postfix(
+                    {
+                        "loss": running_loss / step,
+                        "acc": accuracy_score(targets, predictions),
+                        "f1": f1_score(targets, predictions, average="weighted"),
+                    }
+                )
                 pbar.update(1)
         # compute scores
         scores = {

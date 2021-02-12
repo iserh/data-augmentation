@@ -1,13 +1,14 @@
 """Mlflow Session."""
-from typing import Any, Dict
 import os
+from collections import namedtuple
+from typing import Any, Dict
 
 import mlflow
 from mlflow.entities.run import Run
 
-from collections import namedtuple
-
-backend_stores = namedtuple("BackendStores", ["Default", "MNIST", "CelebA"])(Default="experiments/Default", MNIST="experiments/MNIST", CelebA="experiments/CelebA")
+backend_stores = namedtuple("BackendStores", ["Default", "MNIST", "CelebA"])(
+    Default="experiments/Default", MNIST="experiments/MNIST", CelebA="experiments/CelebA"
+)
 
 
 def get_run(experiment_name: str, **params: Dict[str, Any]) -> Run:

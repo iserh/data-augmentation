@@ -6,6 +6,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
+
 from utils.models import BaseModel, ModelOutput
 
 from .training_arguments import TrainingArguments
@@ -66,10 +67,8 @@ class Trainer:
             pbar.set_postfix({"loss": running_loss / step})
             pbar.update(1)
         # return runnning loss
-        return {
-            "train_loss": running_loss / len(train_loader)
-        }
-    
+        return {"train_loss": running_loss / len(train_loader)}
+
     def test_epoch(self, epoch: int, test_loader: DataLoader, pbar: tqdm) -> Dict[str, float]:
         self.model.eval()
         running_loss = 0
@@ -83,9 +82,7 @@ class Trainer:
                 test_pbar.set_postfix({"loss": running_loss / step})
                 test_pbar.update(1)
         # return running loss
-        return {
-            "test_loss": running_loss / len(test_loader)
-        }
+        return {"test_loss": running_loss / len(test_loader)}
 
     def train_step(self, x_true: Tensor) -> Dict[str, float]:
         # forward pass
@@ -95,15 +92,11 @@ class Trainer:
         output.loss.backward()
         self.optim.step()
         # return losses
-        return {
-            "loss": output.loss.item()
-        }
+        return {"loss": output.loss.item()}
 
     @torch.no_grad()
     def test_step(self, x_true: Tensor) -> Dict[str, float]:
         # forward pass
         output: ModelOutput = self.model(x_true)
         # return losses
-        return {
-            "loss": output.loss.item()
-        }
+        return {"loss": output.loss.item()}

@@ -3,7 +3,7 @@ from typing import Optional, Tuple, Union
 
 import torch
 from torch import Tensor
-from torch.utils.data import Dataset, TensorDataset, DataLoader
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 from tqdm import tqdm
 
 from vae.models.base import VAEConfig, VAEModel

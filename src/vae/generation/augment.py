@@ -1,9 +1,11 @@
 from typing import Any, Dict, Tuple
+
+import torch
 from torch import Tensor
+
 from vae.generation import augmentations
 from vae.generation.interpolation import Interpolation
 from vae.generation.noise import Noise
-import torch
 
 
 def augment_data(
@@ -47,10 +49,24 @@ def augment_data(
         latents, targets, indices = noise(latents, targets)
 
     elif augmentation == augmentations.FORWARD:
-        latents = original_latents.unsqueeze(1).expand(original_latents.size(0), kwargs["k"], *original_latents.size()[1:]).reshape(-1, *original_latents.size()[1:])
-        log_vars = original_log_variances.unsqueeze(1).expand(original_log_variances.size(0), kwargs["k"], *original_log_variances.size()[1:]).reshape(-1, *original_log_variances.size()[1:])
-        targets = original_targets.unsqueeze(1).expand(original_targets.size(0), kwargs["k"], *original_targets.size()[1:]).reshape(-1, *original_targets.size()[1:])
-        indices = torch.arange(0, len(original_latents)).unsqueeze(1).expand(len(original_latents), kwargs["k"]).reshape(-1)
+        latents = (
+            original_latents.unsqueeze(1)
+            .expand(original_latents.size(0), kwargs["k"], *original_latents.size()[1:])
+            .reshape(-1, *original_latents.size()[1:])
+        )
+        log_vars = (
+            original_log_variances.unsqueeze(1)
+            .expand(original_log_variances.size(0), kwargs["k"], *original_log_variances.size()[1:])
+            .reshape(-1, *original_log_variances.size()[1:])
+        )
+        targets = (
+            original_targets.unsqueeze(1)
+            .expand(original_targets.size(0), kwargs["k"], *original_targets.size()[1:])
+            .reshape(-1, *original_targets.size()[1:])
+        )
+        indices = (
+            torch.arange(0, len(original_latents)).unsqueeze(1).expand(len(original_latents), kwargs["k"]).reshape(-1)
+        )
         eps = torch.empty_like(log_vars).normal_()
         latents = eps * (0.5 * log_vars).exp() + latents
 

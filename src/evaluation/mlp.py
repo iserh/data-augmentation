@@ -1,5 +1,15 @@
+from dataclasses import fields
 from typing import Any, Dict, Optional
+
+import mlflow
+import numpy as np
+import torch
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
 from torch.utils.data import ConcatDataset, DataLoader, TensorDataset, dataset
+
+from utils.data import Datasets
+from utils.mlflow import experiments
 from vae import (
     VAEConfig,
     VAEForDataAugmentation,
@@ -8,16 +18,9 @@ from vae import (
     visualize_latents,
     visualize_real_fake_images,
 )
-from utils.mlflow import experiments
-from sklearn.model_selection import train_test_split
-from utils.data import Datasets
-import mlflow
+
 from evaluation.models import MLP
 from evaluation.trainer import Trainer, TrainingArguments
-from dataclasses import fields
-from sklearn.decomposition import PCA
-import torch
-import numpy as np
 
 
 def train_mlp(
@@ -63,7 +66,7 @@ def train_mlp(
     if augmentation != augmentations.BASELINE:
         # load vae model
         vae = VAEForDataAugmentation.from_pretrained(vae_config)
-        
+
         # encode dataset
         original_latents, original_log_vars, original_targets = vae.encode_dataset(train_dataset).tensors
         # augment data
@@ -116,6 +119,7 @@ def train_mlp(
 
 if __name__ == "__main__":
     from utils.mlflow import backend_stores
+
     mlflow.set_tracking_uri(backend_stores.MNIST)
 
     train_mlp(

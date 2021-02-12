@@ -5,7 +5,6 @@ import torch.nn as nn
 from torch import Tensor
 
 from utils import init_weights
-
 from vae.models.base import Decoder, Encoder, VAEConfig, VAEModel
 
 

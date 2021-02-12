@@ -1,10 +1,10 @@
 """Variational autoencoder module class."""
 import torch.nn as nn
+
 from utils import init_weights
 
 
 class MLP(nn.Sequential):
-
     def __init__(self) -> None:
         super(MLP, self).__init__(
             nn.Flatten(),

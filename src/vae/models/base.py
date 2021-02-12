@@ -1,19 +1,20 @@
 """Variational autoencoder module base classes."""
+import inspect
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
+from shutil import copyfile
 from typing import Dict, Optional, Tuple
-
-from yaml.loader import SafeLoader
-from utils.models import ModelConfig, ModelOutput, BaseModel
-from .loss import VAELoss, VAELossOutput
 
 import torch
 import torch.nn as nn
-from torch import Tensor
-from datetime import datetime
 import yaml
-import inspect
-from shutil import copyfile
+from torch import Tensor
+from yaml.loader import SafeLoader
+
+from utils.models import BaseModel, ModelConfig, ModelOutput
+
+from .loss import VAELoss, VAELossOutput
 
 model_store = Path("./models/MNIST")
 
@@ -73,11 +74,11 @@ class VAEModel(BaseModel):
             z=z,
             loss=loss,
         )
-    
+
     @staticmethod
     def from_pretrained(config: VAEConfig, epochs: int) -> "VAEModel":
         return _load_pretrained_model(config, epochs)
-    
+
     def save(self, epochs: int) -> None:
         _save_model(self, epochs)
 
@@ -125,12 +126,6 @@ def _save_model(model: VAEModel, epochs: int) -> None:
     torch.save(model.state_dict(), filename / "state_dict.pt")
     # save model config
     with open(filename / "config.yml", "w") as yml_file:
-        yaml.dump(
-            {
-                "epochs": epochs,
-                "vae_config": config.__dict__
-            },
-            yml_file
-        )
+        yaml.dump({"epochs": epochs, "vae_config": config.__dict__}, yml_file)
     # copy source file
     copyfile(inspect.getfile(model.__class__), filename / "source.py")

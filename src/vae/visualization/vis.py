@@ -43,7 +43,7 @@ def visualize_real_fake_images(
     img_name: str = "real_fake",
     k: Optional[int] = None,
     indices: Optional[np.ndarray] = None,
-    cols: int = 10
+    cols: int = 10,
 ) -> None:
     # k: number of generated fake images for each real image
     k = k or 1
