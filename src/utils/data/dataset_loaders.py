@@ -36,5 +36,5 @@ _datasets = {
 }
 
 
-def Datasets(name: str, *args: Any, **kwargs: Any) -> Union[MNIST, CelebA]:
+def get_dataset(name: str, *args: Any, **kwargs: Any) -> Union[MNIST, CelebA]:
     return _datasets[name](*args, **kwargs)

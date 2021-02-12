@@ -1,5 +1,4 @@
 """Different augmentations to choose."""
-BASELINE = "baseline"
 INTERPOLATION = "interpolation"
 EXTRAPOLATION = "extrapolation"
 NOISE = "noise"

@@ -1,4 +1,6 @@
+from typing import Optional
 import torch.nn as nn
+from torch import Tensor
 
 from .model_config import ModelConfig
 from .model_output import ModelOutput
@@ -15,7 +17,7 @@ class BaseModel(nn.Module):
         self.config.device = device
         return super().to(device, *args, **kwargs)
 
-    def forward(self) -> ModelOutput:
+    def forward(self, x: Tensor, y: Optional[Tensor] = None) -> ModelOutput:
         raise NotImplementedError()
 
     def save(self, epochs: int) -> None:

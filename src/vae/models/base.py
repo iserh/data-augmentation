@@ -27,11 +27,11 @@ class VAEConfig(ModelConfig):
 
 @dataclass
 class VAEOutput(ModelOutput):
-    loss: VAELossOutput
-    reconstructed: Tensor
-    mean: Tensor
-    log_var: Tensor
-    z: Tensor
+    loss: Optional[VAELossOutput] = None
+    reconstructed: Optional[Tensor] = None
+    mean: Optional[Tensor] = None
+    log_var: Optional[Tensor] = None
+    z: Optional[Tensor] = None
 
 
 class Encoder(nn.Module):
@@ -57,7 +57,7 @@ class VAEModel(BaseModel):
         self.encoder: Encoder = NotImplemented
         self.decoder: Decoder = NotImplemented
 
-    def forward(self, x: Tensor) -> Dict[str, Tensor]:
+    def forward(self, x: Tensor, y: Optional[Tensor] = None) -> VAEOutput:
         # encode input tensor
         mean, log_var = self.encoder(x)
         # reparameterization trick
