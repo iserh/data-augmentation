@@ -1,12 +1,15 @@
 # folders
-experiments
+/experiments
+/models
 
 # dotfiles
 .vscode
 .nox
 .python-version
 **/.DS_Store
+.ipynb_checkpoints
 
 # others
 **/__pycache__
 cookie
+scratchpad.ipynb

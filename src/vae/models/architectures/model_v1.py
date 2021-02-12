@@ -6,10 +6,10 @@ from torch import Tensor
 
 from utils import init_weights
 
-from .base import Encoder, Decoder, VAEConfig, VAEModel
+from vae.models.base import Decoder, Encoder, VAEConfig, VAEModel
 
 
-class EncoderV1(Encoder):
+class _Encoder(Encoder):
     def __init__(self, z_dim: int, nc: int) -> None:
         super().__init__()
         self.conv_stage = nn.Sequential(
@@ -42,7 +42,7 @@ class EncoderV1(Encoder):
         return self.mean(x), self.variance_log(x)
 
 
-class DecoderV1(Decoder):
+class _Decoder(Decoder):
     def __init__(self, z_dim: int, nc: int) -> None:
         super().__init__()
         self.linear_stage = nn.Linear(z_dim, 64 * 4 * 4 * 4)
@@ -74,6 +74,9 @@ class DecoderV1(Decoder):
 class VAEModelV1(VAEModel):
     def __init__(self, config: VAEConfig) -> None:
         super().__init__(config)
-        self.code_paths.append(__file__)
-        self.encoder = EncoderV1(self.config.z_dim, nc=1)
-        self.decoder = DecoderV1(self.config.z_dim, nc=1)
+        self.encoder = _Encoder(config.z_dim, nc=1)
+        self.decoder = _Decoder(config.z_dim, nc=1)
+
+
+def _get_model_constructor() -> VAEModelV1:
+    return VAEModelV1

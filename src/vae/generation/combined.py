@@ -14,7 +14,7 @@ from vae.visualization import visualize_images, visualize_latents, visualize_rea
 # *** HYPERPARAMETERS ***
 
 DATASET = "MNIST"
-vae_config = VAEConfig(epochs=100, checkpoint=100, z_dim=10, beta=1.0)
+vae_config = VAEConfig(total_epochs=100, epochs=100, z_dim=10, beta=1.0)
 N_SAMPLES = 1024
 K_INTERPOLATION = 3
 K_NOISE = 1

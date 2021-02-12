@@ -1,0 +1,8 @@
+"""Different augmentations to choose."""
+BASELINE = "baseline"
+INTERPOLATION = "interpolation"
+EXTRAPOLATION = "extrapolation"
+NOISE = "noise"
+EXTRAPOLATION_NOISE = "noise_extra"
+INTERPOLATION_NOISE = "noise_inter"
+FORWARD = "forward"

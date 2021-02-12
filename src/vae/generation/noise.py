@@ -41,7 +41,7 @@ if __name__ == "__main__":
     from vae.models import MNISTVAE, VAEConfig
     from vae.visualization import visualize_latents, visualize_real_fake_images
 
-    vae_config = VAEConfig(epochs=5, checkpoint=5, z_dim=2, beta=1.0)
+    vae_config = VAEConfig(total_epochs=5, epochs=5, z_dim=2, beta=1.0)
     DATASET = "MNIST"
     N_SAMPLES = 1000
     K = 2

@@ -81,7 +81,7 @@ if __name__ == "__main__":
     mlflow.set_experiment(ExperimentName.VAEGeneration.value)
 
     dataset = MNIST_Dataset()
-    vae_config = VAEConfig(epochs=5, checkpoint=5, z_dim=2, beta=1.0)
+    vae_config = VAEConfig(total_epochs=5, epochs=5, z_dim=2, beta=1.0)
     model = MNISTVAE.from_pretrained(vae_config)
     vae = VAEForDataAugmentation(model)
 
