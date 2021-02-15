@@ -14,10 +14,11 @@ from vae.generation import augment_data
 from vae.visualization import visualize_latents, visualize_real_fake_images
 from utils.trainer import Trainer, TrainingArguments
 from utils.models import BaseModel, ModelOutput, ModelConfig
+from sklearn.metrics import accuracy_score, f1_score
 
 
 class CNNModel(BaseModel):
-    def __init__(self, config: ModelConfig) -> None:
+    def __init__(self, config: ModelConfig = ModelConfig()) -> None:
         super(CNNModel, self).__init__(config)
         self.sequential = nn.Sequential(
             # input size: (nc) x 28 x 28
@@ -61,6 +62,7 @@ class CNNModel(BaseModel):
 def perform_data_augmentation(
     dataset: Dataset,
     vae_config: VAEConfig,
+    vae_epochs: int,
     augmentation_method: str,
     augmentation_params: Dict[str, Union[float, int]],
     seed: Optional[int] = None,
@@ -81,7 +83,7 @@ def perform_data_augmentation(
     # *** Data augmentation ***
 
     # load vae model
-    vae = VAEForDataAugmentation.from_pretrained(vae_config)
+    vae = VAEForDataAugmentation.from_pretrained(vae_config, epochs=vae_epochs)
     # encode dataset
     original_latents, original_log_vars, original_targets = vae.encode_dataset(dataset).tensors
     # augment data - get augmented latents, targets and the indices used for augmentation (for visualization)
@@ -109,14 +111,14 @@ def perform_data_augmentation(
     # *** Return ***
 
     # concat the original and the augmented dataset
-    dataset = ConcatDataset([dataset, decoded])
-    print(f"Augmented dataset from {1} samples per class ({1} total) to {1} samples per class ({1} total)")
-    return dataset
+    concat_dataset = ConcatDataset([dataset, decoded])
+    print(f"Augmented dataset from {'X'} samples per class ({len(dataset)} total) to {'X'} samples per class ({len(concat_dataset)} total)")
+    return concat_dataset
 
 
 def train_cnn(training_args: TrainingArguments, train_dataset: Dataset, dev_dataset: Dataset, test_dataset: Dataset):
     # create mlp model
-    mlp = CNNModel(nc=1, n_classes=10)
+    mlp = CNNModel()
     # trainer
     trainer = Trainer(
         args=training_args,
@@ -124,6 +126,7 @@ def train_cnn(training_args: TrainingArguments, train_dataset: Dataset, dev_data
         train_dataset=train_dataset,
         dev_dataset=dev_dataset,
         test_dataset=test_dataset,
+        step_metrics=step_metrics,
     )
     # train model
     trainer.train()
@@ -131,15 +134,23 @@ def train_cnn(training_args: TrainingArguments, train_dataset: Dataset, dev_data
     return trainer.evaluate()
 
 
+def step_metrics(predictions: Tensor, labels: Tensor) -> Dict[str, float]:
+    return {
+        "acc": accuracy_score(labels, predictions),
+        "f1": f1_score(labels, predictions),
+    }
+
+
 if __name__ == "__main__":
     from utils.mlflow import backend_stores
     from utils.data import get_dataset
     from torch.utils.data import random_split
     from vae.generation import augmentations
-    from vae import train_vae_on_dataset
 
     DATASET = "MNIST"
     DATASET_LIMIT = 100
+    AUGMENTATION = augmentations.FORWARD
+    VAE_EPOCHS = 20
     training_args = TrainingArguments(epochs=10, save_intervall=None, save_model=False)
     vae_config = VAEConfig(z_dim=10, beta=1.0)
     augmentation_params = {"k": 3}
@@ -150,21 +161,25 @@ if __name__ == "__main__":
     # load train dataset
     train_dataset = get_dataset(DATASET, train=True)
     # limit train dataset corresponding to DATASET_LIMIT and add 5000 for dev dataset
-    train_dataset, _ = random_split(train_dataset, [DATASET_LIMIT + 5000, len(train_dataset) - (DATASET_LIMIT + 5000)])
+    train_dataset, dev_dataset, _ = random_split(train_dataset, [DATASET_LIMIT, 5000, len(train_dataset) - (DATASET_LIMIT + 5000)])
 
-    # * VAE Training: uncomment this line to train the vae
-    # train_vae_on_dataset(TrainingArguments(epochs=10, seed=1337), train_dataset, test_dataset, vae_config)
-    # perform data augmentation
-    train_dataset = perform_data_augmentation(train_dataset, vae_config, augmentations.FORWARD, augmentation_params, seed=1337)
-    # train - dev split
-    train_dataset, dev_dataset = random_split(train_dataset, [DATASET_LIMIT, 5000])
+    # * VAE Training: uncomment these 2 line to train the vae
+    # from vae import train_vae_on_dataset
+    # train_vae_on_dataset(TrainingArguments(epochs=VAE_EPOCHS, seed=1337), train_dataset, test_dataset, vae_config
 
-    # train cnn
-    results = train_cnn(
-        training_args=training_args,
-        train_dataset=train_dataset,
-        dev_dataset=dev_dataset,
-        test_dataset=test_dataset,
-    )
+    mlflow.set_experiment("CNN Training")
+    with mlflow.start_run(run_name=AUGMENTATION or "baseline"):
+        # perform data augmentation
+        if AUGMENTATION is not None:
+            train_dataset = perform_data_augmentation(train_dataset, vae_config, VAE_EPOCHS, AUGMENTATION, augmentation_params, seed=1337)
+            dev_dataset = perform_data_augmentation(train_dataset, vae_config, VAE_EPOCHS, AUGMENTATION, augmentation_params, seed=1337)
 
-    print(results)
+        # train cnn
+        results = train_cnn(
+            training_args=training_args,
+            train_dataset=train_dataset,
+            dev_dataset=dev_dataset,
+            test_dataset=test_dataset,
+        )
+
+        print(results)

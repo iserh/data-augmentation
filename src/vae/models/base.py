@@ -16,7 +16,7 @@ from utils.models import BaseModel, ModelConfig, ModelOutput
 
 from .loss import VAELoss, VAELossOutput
 
-model_store = Path("./models/MNIST")
+model_store = Path("./pretrained_models/MNIST")
 
 
 @dataclass
@@ -28,7 +28,6 @@ class VAEConfig(ModelConfig):
 @dataclass
 class VAEOutput(ModelOutput):
     loss: Optional[VAELossOutput] = None
-    reconstructed: Optional[Tensor] = None
     mean: Optional[Tensor] = None
     log_var: Optional[Tensor] = None
     z: Optional[Tensor] = None
@@ -68,7 +67,7 @@ class VAEModel(BaseModel):
         # compute loss
         loss = self.criterion(x_hat, x, mean, log_var)
         return VAEOutput(
-            reconstructed=x_hat,
+            prediction=x_hat,
             mean=mean,
             log_var=log_var,
             z=z,

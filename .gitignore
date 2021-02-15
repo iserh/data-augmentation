@@ -1,6 +1,6 @@
 # folders
 /experiments
-/models
+/pretrained_models
 
 # dotfiles
 .vscode

@@ -113,20 +113,19 @@ def train_vae_on_dataset(training_args: TrainingArguments, train_dataset: Datase
         visualize_images(fakes, 50, "random_fakes", cols=8)
 
 
-
 if __name__ == "__main__":
-    from utils.data import get_dataset
     from utils.mlflow import backend_stores
+    from utils.data import get_dataset
 
     DATASET = "MNIST"
-
+    VAE_EPOCHS = 20
+    vae_config = VAEConfig(z_dim=10, beta=1.0)
     mlflow.set_tracking_uri(getattr(backend_stores, DATASET))
 
-    vae_config = VAEConfig(z_dim=10, beta=1.0)
-    # training arguments
-    training_args = TrainingArguments(epochs=15, seed=1337)
-
-    train_dataset = get_dataset(DATASET, train=True)
+    # load test dataset
     test_dataset = get_dataset(DATASET, train=False)
+    # load train dataset
+    train_dataset = get_dataset(DATASET, train=True)
 
-    train_vae(training_args, train_dataset, test_dataset, vae_config)
+    # * VAE Training: uncomment these 2 line to train the vae
+    train_vae_on_dataset(TrainingArguments(epochs=VAE_EPOCHS, seed=1337), train_dataset, test_dataset, vae_config)

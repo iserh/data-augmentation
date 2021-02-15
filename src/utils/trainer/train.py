@@ -1,5 +1,5 @@
 """Trainer for VAEs."""
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 import mlflow
 import torch
@@ -14,12 +14,14 @@ from .training_arguments import TrainingArguments
 
 class Trainer:
     def __init__(
-        self, args: TrainingArguments, model: BaseModel, train_dataset: Dataset, dev_dataset: Dataset, test_dataset: Optional[Dataset] = None
+        self, args: TrainingArguments, model: BaseModel, train_dataset: Dataset, dev_dataset: Dataset, test_dataset: Optional[Dataset] = None, step_metrics: Optional[Callable] = None, epoch_metrics: Optional[Callable] = None
     ) -> None:
         self.args = args
         self.train_dataset = train_dataset
         self.dev_dataset = dev_dataset
         self.test_dataset = test_dataset
+        self.step_metrics = step_metrics
+        self.epoch_metrics = epoch_metrics
         # Use cuda if available
         self.device = "cuda:0" if torch.cuda.is_available() and not args.no_cuda else "cpu"
         # Model
@@ -31,6 +33,8 @@ class Trainer:
         # log config
         mlflow.log_params(self.args.__dict__)
         mlflow.log_params(self.model.config.__dict__)
+        mlflow.log_param("train_dataset_size", len(self.train_dataset))
+        mlflow.log_param("dev_dataset_size", len(self.dev_dataset))
         # seeding
         if self.args.seed is not None:
             torch.manual_seed(self.args.seed)
@@ -58,51 +62,89 @@ class Trainer:
             self.model.save(self.args.epochs)
     
     def evaluate(self) -> Dict[str, float]:
+        mlflow.log_param("test_dataset_size", len(self.test_dataset))
         # create dataloader
         test_loader = DataLoader(self.test_dataset, batch_size=512, shuffle=False, pin_memory=True, num_workers=4)
         # evaluate whole test_loader once
         self.model.eval()
         running_loss = 0
+        predictions, labels = torch.Tensor([]), torch.Tensor([])
         with tqdm(total=len(test_loader), desc="Evaluating") as pbar:
             for step, (x, y) in enumerate(test_loader, start=1):
                 # test step, update running loss
-                running_loss += self.test_step(x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True))["loss"]
+                output = self.test_step(x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True))
+                running_loss += output["loss"]
+                predictions = torch.cat([predictions, output["predictions"]], dim=0)
+                labels = torch.cat([labels, y.flatten()], dim=0)
+                metrics = self.step_metrics(predictions, labels) if self.step_metrics else {}
                 # progress bar
-                pbar.set_postfix({"loss": running_loss / step})
+                pbar.set_postfix({
+                    "loss": running_loss / step,
+                    **metrics,
+                })
                 pbar.update(1)
+        epoch_metrics = self.epoch_metrics(predictions, labels) if self.epoch_metrics else {}
+        metrics = {
+            "eval_loss": running_loss / len(test_loader),
+            **{"eval_" + k: v for k, v in epoch_metrics.items()},
+            **{"eval_" + k: v for k, v in metrics.items()},
+        }
         # log loss metrics
-        loss = running_loss / len(test_loader)
-        mlflow.log_metrics({"eval_loss": loss})
-        return {"eval_loss": loss}
+        mlflow.log_metrics(metrics)
+        return metrics
 
     def train_epoch(self, epoch: int, train_loader: DataLoader, pbar: tqdm) -> Dict[str, float]:
         self.model.train()
         running_loss = 0
+        predictions, labels = torch.Tensor([]), torch.Tensor([])
         for step, (x, y) in enumerate(train_loader, start=1):
             # train step, update running loss
-            running_loss += self.train_step(x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True))["loss"]
+            output = self.train_step(x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True))
+            running_loss += output["loss"]
+            predictions = torch.cat([predictions, output["predictions"]], dim=0)
+            labels = torch.cat([labels, y.flatten()], dim=0)
+            metrics = self.step_metrics(predictions, labels) if self.step_metrics else {}
             # log to mlflow
-            mlflow.log_metric("epoch", epoch + 0.5 * step / len(train_loader))
+            mlflow.log_metrics({
+                "epoch": epoch - 1 + (0.5 * step / len(train_loader)),
+                **{"train_" + k: v for k, v in metrics.items()},
+            })
             # progress bar
-            pbar.set_postfix({"loss": running_loss / step})
+            pbar.set_postfix({
+                "loss": running_loss / step,
+                **metrics
+            })
             pbar.update(1)
+        epoch_metrics = self.epoch_metrics(predictions, labels) if self.epoch_metrics else {}
         # return runnning loss
-        return {"train_loss": running_loss / len(train_loader)}
+        return {"train_loss": running_loss / len(train_loader), **{"train_" + k: v for k, v in epoch_metrics.items()}}
 
     def test_epoch(self, epoch: int, test_loader: DataLoader) -> Dict[str, float]:
         self.model.eval()
         running_loss = 0
-        with tqdm(total=len(test_loader), desc=f"Test epoch {epoch}/{self.args.epochs}", leave=False) as test_pbar:
+        predictions, labels = torch.Tensor([]), torch.Tensor([])
+        with tqdm(total=len(test_loader), desc=f"Test epoch {epoch}/{self.args.epochs}", leave=True) as test_pbar:
             for step, (x, y) in enumerate(test_loader, start=1):
                 # test step, update running loss
-                running_loss += self.test_step(x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True))["loss"]
+                output = self.test_step(x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True))
+                running_loss += output["loss"]
+                predictions = torch.cat([predictions, output["predictions"]], dim=0)
+                labels = torch.cat([labels, y.flatten()], dim=0)
+                metrics = self.step_metrics(predictions, labels) if self.step_metrics else {}
                 # log to mlflow
-                mlflow.log_metric("epoch", epoch + 0.5 + 0.5 * step / len(test_loader))
+                mlflow.log_metrics({
+                    "epoch": epoch - 0.5 + (0.5 * step / len(test_loader)),
+                    **{"test_" + k: v for k, v in metrics.items()}
+                })
                 # progress bar
-                test_pbar.set_postfix({"loss": running_loss / step})
+                test_pbar.set_postfix({
+                    "loss": running_loss / step,
+                    **metrics,
+                })
                 test_pbar.update(1)
-        # return running loss
-        return {"test_loss": running_loss / len(test_loader)}
+        epoch_metrics = self.epoch_metrics(predictions, labels) if self.epoch_metrics else {}
+        # return runnning loss
+        return {"test_loss": running_loss / len(test_loader), **{"test_" + k: v for k, v in epoch_metrics.items()}}
 
     def train_step(self, x: Tensor, y: Optional[Tensor] = None) -> Dict[str, float]:
         # forward pass
@@ -112,11 +154,11 @@ class Trainer:
         output.loss.backward()
         self.optim.step()
         # return losses
-        return {"loss": output.loss.item()}
+        return {"loss": output.loss.item(), "predictions": output.prediction.cpu()}
 
     @torch.no_grad()
     def test_step(self, x: Tensor, y: Optional[Tensor] = None) -> Dict[str, float]:
         # forward pass
         output: ModelOutput = self.model(x, y)
         # return losses
-        return {"loss": output.loss.item()}
+        return {"loss": output.loss.item(), "predictions": output.prediction.cpu()}
