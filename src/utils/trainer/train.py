@@ -14,7 +14,14 @@ from .training_arguments import TrainingArguments
 
 class Trainer:
     def __init__(
-        self, args: TrainingArguments, model: BaseModel, train_dataset: Dataset, dev_dataset: Dataset, test_dataset: Optional[Dataset] = None, step_metrics: Optional[Callable] = None, epoch_metrics: Optional[Callable] = None
+        self,
+        args: TrainingArguments,
+        model: BaseModel,
+        train_dataset: Dataset,
+        dev_dataset: Dataset,
+        test_dataset: Optional[Dataset] = None,
+        step_metrics: Optional[Callable] = None,
+        epoch_metrics: Optional[Callable] = None,
     ) -> None:
         self.args = args
         self.train_dataset = train_dataset
@@ -55,12 +62,17 @@ class Trainer:
                 # log loss metrics
                 mlflow.log_metrics(epoch_metrics)
                 # optional save model
-                if self.args.save_model and self.args.save_intervall and epoch % self.args.save_intervall == 0 and epoch != self.args.epochs:
+                if (
+                    self.args.save_model
+                    and self.args.save_intervall
+                    and epoch % self.args.save_intervall == 0
+                    and epoch != self.args.epochs
+                ):
                     self.model.save(epoch)
         # save final model
         if self.args.save_model:
             self.model.save(self.args.epochs)
-    
+
     def evaluate(self) -> Dict[str, float]:
         mlflow.log_param("test_dataset_size", len(self.test_dataset))
         # create dataloader
@@ -78,10 +90,12 @@ class Trainer:
                 labels = torch.cat([labels, y.flatten()], dim=0)
                 metrics = self.step_metrics(predictions, labels) if self.step_metrics else {}
                 # progress bar
-                pbar.set_postfix({
-                    "loss": running_loss / step,
-                    **metrics,
-                })
+                pbar.set_postfix(
+                    {
+                        "loss": running_loss / step,
+                        **metrics,
+                    }
+                )
                 pbar.update(1)
         epoch_metrics = self.epoch_metrics(predictions, labels) if self.epoch_metrics else {}
         metrics = {
@@ -105,15 +119,14 @@ class Trainer:
             labels = torch.cat([labels, y.flatten()], dim=0)
             metrics = self.step_metrics(predictions, labels) if self.step_metrics else {}
             # log to mlflow
-            mlflow.log_metrics({
-                "epoch": epoch - 1 + (0.5 * step / len(train_loader)),
-                **{"train_" + k: v for k, v in metrics.items()},
-            })
+            mlflow.log_metrics(
+                {
+                    "epoch": epoch - 1 + (0.5 * step / len(train_loader)),
+                    **{"train_" + k: v for k, v in metrics.items()},
+                }
+            )
             # progress bar
-            pbar.set_postfix({
-                "loss": running_loss / step,
-                **metrics
-            })
+            pbar.set_postfix({"loss": running_loss / step, **metrics})
             pbar.update(1)
         epoch_metrics = self.epoch_metrics(predictions, labels) if self.epoch_metrics else {}
         # return runnning loss
@@ -132,15 +145,19 @@ class Trainer:
                 labels = torch.cat([labels, y.flatten()], dim=0)
                 metrics = self.step_metrics(predictions, labels) if self.step_metrics else {}
                 # log to mlflow
-                mlflow.log_metrics({
-                    "epoch": epoch - 0.5 + (0.5 * step / len(test_loader)),
-                    **{"test_" + k: v for k, v in metrics.items()}
-                })
+                mlflow.log_metrics(
+                    {
+                        "epoch": epoch - 0.5 + (0.5 * step / len(test_loader)),
+                        **{"test_" + k: v for k, v in metrics.items()},
+                    }
+                )
                 # progress bar
-                test_pbar.set_postfix({
-                    "loss": running_loss / step,
-                    **metrics,
-                })
+                test_pbar.set_postfix(
+                    {
+                        "loss": running_loss / step,
+                        **metrics,
+                    }
+                )
                 test_pbar.update(1)
         epoch_metrics = self.epoch_metrics(predictions, labels) if self.epoch_metrics else {}
         # return runnning loss

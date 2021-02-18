@@ -7,7 +7,7 @@ from torch.utils.data._utils.collate import default_collate
 
 
 class BatchCollector:
-    """TODO: better message: Always pass tensors to BatchCollector"""
+    """TODO: better message: Always pass tensors to BatchCollector."""
 
     def __init__(self, apply_fn: Callable, k: int = 1) -> None:
         self.data = []  # collects all data the data
@@ -25,8 +25,8 @@ class BatchCollector:
         return self
 
     @staticmethod
-    def collate_fn(batch):
-        # flatten out batch to process each element separately
+    def collate_fn(batch):  # noqa: ANN001
+        # flatten out batch to process each element separately  # noqa: ANN205
         batch = np.asarray(batch, dtype=object)
         flat_batch = batch.reshape(-1)
         # TODO: is there a nice way to vectorize this?

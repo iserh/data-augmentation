@@ -6,6 +6,11 @@ import torch.nn as nn
 
 
 def init_weights(module: nn.Module) -> None:
+    """Initialize the weights of a module.
+
+    Args:
+        module (nn.Module): The module
+    """
     if type(module) == nn.Linear:
         nn.init.xavier_uniform_(module.weight)
         module.bias.data.fill_(0.01)
@@ -16,4 +21,12 @@ def init_weights(module: nn.Module) -> None:
 
 
 def uri_to_path(uri: str) -> Path:
+    """Convert an uri to a path.
+
+    Args:
+        uri (str): The uri to convert
+
+    Returns:
+        Path: The converted path
+    """
     return Path(unquote(urlparse(uri).path))

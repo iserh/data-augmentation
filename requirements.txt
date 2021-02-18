@@ -1,9 +1,19 @@
-# This file may be used to create an environment using:
-# $ conda create --name <env> --file <this file>
+black
+darglint
+flake8
+flake8-annotations
+flake8-black
+flake8-bugbear
+flake8-builtins
+flake8-docstrings
+flake8-isort
+flake8-use-fstring
+isort
 matplotlib
+nox
 numpy
 pandas
-pillow
+reindent
 scikit-learn
 scipy
 tqdm

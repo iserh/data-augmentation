@@ -7,5 +7,7 @@ from torch import Tensor
 
 @dataclass
 class ModelOutput:
+    """Model output dataclass."""
+
     prediction: Optional[Tensor] = None
     loss: Optional[Tensor] = None

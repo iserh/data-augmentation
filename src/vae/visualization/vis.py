@@ -64,7 +64,7 @@ def visualize_real_fake_images(
     plt.title("Real Images")
     plt.imshow(
         np.transpose(
-            vutils.make_grid(dupl_reals[: n * k], padding=5, normalize=True, nrow=cols or k * 2),
+            vutils.make_grid(dupl_reals[:n], padding=5, normalize=True, nrow=cols or k * 2),
             (1, 2, 0),
         )
     )
@@ -75,7 +75,7 @@ def visualize_real_fake_images(
     plt.title("Fake Images")
     plt.imshow(
         np.transpose(
-            vutils.make_grid(fakes[: n * k], padding=5, normalize=True, nrow=cols or k * 2),
+            vutils.make_grid(fakes[:n], padding=5, normalize=True, nrow=cols or k * 2),
             (1, 2, 0),
         )
     )
@@ -87,7 +87,7 @@ def visualize_real_fake_images(
         plt.title("Images used for Generation")
         plt.imshow(
             np.transpose(
-                vutils.make_grid(reals[indices[: n * k]], padding=5, normalize=True, nrow=cols or k * 2),
+                vutils.make_grid(reals[indices[:n]], padding=5, normalize=True, nrow=cols or k * 2),
                 (1, 2, 0),
             )
         )

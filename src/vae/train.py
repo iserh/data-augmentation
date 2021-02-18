@@ -1,5 +1,6 @@
 """Train VAE example."""
 from typing import Optional
+
 import mlflow
 import torch
 from sklearn.decomposition import PCA
@@ -12,7 +13,13 @@ from vae.models.architectures import VAEModelV1
 from vae.visualization import visualize_images, visualize_latents, visualize_real_fake_images
 
 
-def train_vae_on_classes(training_args: TrainingArguments, train_dataset: Dataset, test_dataset: Dataset, vae_config: VAEConfig, seed: Optional[int] = None):
+def train_vae_on_classes(
+    training_args: TrainingArguments,
+    train_dataset: Dataset,
+    test_dataset: Dataset,
+    vae_config: VAEConfig,
+    seed: Optional[int] = None,
+) -> None:
     # initialize mlflow experiment
     mlflow.set_experiment("VAE Training")
 
@@ -53,9 +60,10 @@ def train_vae_on_classes(training_args: TrainingArguments, train_dataset: Datase
 
             encoded = vae.encode_dataset(test_dataset)
             fakes = vae.decode_dataset(TensorDataset(encoded.tensors[0], encoded.tensors[1])).tensors[0]
+            pca = PCA(2).fit(encoded.tensors[0]) if vae_config.z_dim > 2 else None
             visualize_latents(
                 encoded.tensors[0],
-                pca=PCA(2).fit(encoded.tensors[0]),
+                pca=pca,
                 targets=test_dataset.tensors[1],
                 color_by_target=True,
             )
@@ -65,11 +73,17 @@ def train_vae_on_classes(training_args: TrainingArguments, train_dataset: Datase
             z = torch.normal(0, 1, size=(200, vae_config.z_dim))
             labels = torch.ones((200,)) * label
             fakes = vae.decode_dataset(TensorDataset(z, labels)).tensors[0]
-            visualize_latents(z, pca=PCA(2).fit(encoded.tensors[0]), img_name="random_latents")
+            visualize_latents(z, pca=pca, img_name="random_latents")
             visualize_images(fakes, 50, "random_fakes", cols=8)
 
 
-def train_vae_on_dataset(training_args: TrainingArguments, train_dataset: Dataset, test_dataset: Dataset, vae_config: VAEConfig, seed: Optional[int] = None):
+def train_vae_on_dataset(
+    training_args: TrainingArguments,
+    train_dataset: Dataset,
+    test_dataset: Dataset,
+    vae_config: VAEConfig,
+    seed: Optional[int] = None,
+) -> None:
     # initialize mlflow experiment
     mlflow.set_experiment("VAE Training")
 
@@ -114,11 +128,11 @@ def train_vae_on_dataset(training_args: TrainingArguments, train_dataset: Datase
 
 
 if __name__ == "__main__":
-    from utils.mlflow import backend_stores
     from utils.data import get_dataset
+    from utils.mlflow import backend_stores
 
     DATASET = "MNIST"
-    VAE_EPOCHS = 20
+    VAE_EPOCHS = 25
     vae_config = VAEConfig(z_dim=10, beta=1.0)
     mlflow.set_tracking_uri(getattr(backend_stores, DATASET))
 
