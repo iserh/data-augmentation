@@ -6,8 +6,14 @@ from typing import Optional
 class TrainingArguments:
     """Training arguments dataclass."""
 
-    epochs: int = 20
+    epochs: Optional[int] = None
+    total_steps: Optional[int] = None
     no_cuda: bool = False
     save_intervall: Optional[int] = None
     save_model: bool = True
     seed: Optional[int] = None
+    batch_size: int = 128
+    early_stopping: bool = False
+    early_stopping_window: int = 10
+    validation_intervall: Optional[int] = None
+    metric_window: Optional[int] = None

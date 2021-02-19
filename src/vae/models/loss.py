@@ -1,5 +1,5 @@
 """Variational autoencoder loss criterion."""
-from typing import Tuple
+from typing import Tuple, Any
 
 import numpy as np
 import torch.nn as nn
@@ -16,6 +16,19 @@ class VAELossOutput:
 
     def item(self) -> Tuple[float, float]:
         return self.r_loss.item(), self.kl_loss.item()
+    
+    def __add__(self, other: "VAELossOutput") -> "VAELossOutput":
+        if not isinstance(other, VAELossOutput):
+            raise TypeError(f"unsupported operand type(s) for +: ‘{type(other)}’ and ‘VAELossOutput’")
+        self.r_loss += other.r_loss
+        self.kl_loss += other.kl_loss
+        return self
+    
+    def __radd__(self, other: Any) -> "VAELossOutput":
+        if other == 0:
+            return self
+        else:
+            return self.__add__(other)
 
 
 class VAELoss:

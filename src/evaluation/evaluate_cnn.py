@@ -8,18 +8,19 @@ from utils.mlflow import backend_stores
 from utils.trainer import TrainingArguments
 from vae.generation import augment_dataset_using_per_class_vaes, augment_dataset_using_single_vae, augmentations
 from vae.models import VAEConfig
+from evaluation.models import CNNMNIST
 
 from evaluation.train_model import train_model
 
 # Parameter for classification task
 DATASET = "MNIST"
 DATASET_LIMIT = 50
-training_args = TrainingArguments(epochs=10, save_intervall=None, save_model=False, seed=1337)
+training_args = TrainingArguments(epochs=200, save_intervall=None, save_model=False, seed=1337, early_stopping=True)
 # Parameter for augmentation task
 PER_CLASS_VAE = False
 VAE_EPOCHS = 25
 vae_config = VAEConfig(z_dim=10, beta=1.0)
-AUGMENTATION = augmentations.FORWARD
+AUGMENTATION = None
 augmentation_params = {"k": 100}
 
 # set the backend store uri of mlflow
@@ -60,6 +61,7 @@ with mlflow.start_run(run_name=AUGMENTATION or "baseline"):
 
     # train cnn
     results = train_model(
+        model=CNNMNIST(),
         training_args=training_args,
         train_dataset=train_dataset,
         dev_dataset=dev_dataset,
