@@ -101,7 +101,7 @@ class Trainer:
                 # log to mlflow
                 mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=step)
                 # progress bar
-                pbar.set_postfix(metrics)
+                pbar.set_postfix({k: f"{v:7.2f}" for k, v in metrics.items()})
                 pbar.update(1)
 
                 # validation on val dataset
@@ -152,7 +152,7 @@ class Trainer:
                 # compute step metrics
                 metrics = self.log_step(outputs)
                 # progress bar
-                test_pbar.set_postfix(metrics)
+                test_pbar.set_postfix({k: f"{v:7.2f}" for k, v in metrics.items()})
                 test_pbar.update(1)
         # compute epoch metrics and concat with step metrics of last step
         metrics = {**metrics, **self.log_epoch(outputs)}
