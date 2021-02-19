@@ -7,9 +7,9 @@ from sklearn.decomposition import PCA
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 from utils.trainer import TrainingArguments
-from vae.trainer import VAETrainer
 from vae.models import VAEConfig, VAEForDataAugmentation
 from vae.models.architectures import VAEModelV1
+from vae.trainer import VAETrainer
 from vae.visualization import visualize_images, visualize_latents, visualize_real_fake_images
 
 

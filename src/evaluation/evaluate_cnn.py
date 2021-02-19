@@ -8,8 +8,8 @@ from utils.mlflow import backend_stores
 from utils.trainer import TrainingArguments
 from vae.generation import augment_dataset_using_per_class_vaes, augment_dataset_using_single_vae, augmentations
 from vae.models import VAEConfig
-from evaluation.models import CNNMNIST
 
+from evaluation.models import CNNMNIST
 from evaluation.train_model import train_model
 
 # Parameter for classification task

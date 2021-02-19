@@ -2,6 +2,7 @@
 from typing import Callable, Dict, Optional, Tuple
 
 import mlflow
+import pandas as pd
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
@@ -9,9 +10,8 @@ from tqdm import tqdm
 
 from utils.models import BaseModel, ModelOutput
 
-from .training_arguments import TrainingArguments
 from .early_stopping import EarlyStopping
-import pandas as pd
+from .training_arguments import TrainingArguments
 
 
 class Trainer:
@@ -71,13 +71,13 @@ class Trainer:
         mlflow.log_param("train_dataset_size", len(self.train_dataset))
         mlflow.log_param("dev_dataset_size", len(self.dev_dataset))
 
-        step_stopped = self.train_loop(train_loader, test_loader)
+        step_stopped, epoch_stopped = self.train_loop(train_loader, test_loader)
 
         # save final model
         if self.args.save_model:
-            self.model.save(step_stopped)
+            self.model.save(epoch_stopped)
 
-    def train_loop(self, train_loader: DataLoader, test_loader: DataLoader):
+    def train_loop(self, train_loader: DataLoader, test_loader: DataLoader) -> Tuple[int, int]:
         # initialize epoch & step counter
         epoch, step = 1, 0
         # gather outputs
@@ -93,7 +93,9 @@ class Trainer:
                 # set model to train mode
                 self.model.train()
                 # train one step and remember outputs
-                outputs = outputs.append(self.train_step(*[x.to(self.device, non_blocking=True) for x in batch]), ignore_index=True)
+                outputs = outputs.append(
+                    self.train_step(*[x.to(self.device, non_blocking=True) for x in batch]), ignore_index=True
+                )
                 # compute step metrics
                 metrics = self.log_step(outputs)
                 # log to mlflow
@@ -122,15 +124,18 @@ class Trainer:
                     # reset outputs
                     outputs = pd.DataFrame()
                     # update epoch counter and tqdm description
-                    pbar.set_description(f"Training epoch {epoch}", refresh=True)
-                    epoch += 1
+                    if not step >= self.args.total_steps:
+                        epoch += 1
+                        pbar.set_description(f"Training epoch {epoch}", refresh=True)
 
                 if early_stop:
                     break
 
                 # optional save model
                 if self.args.save_model and self.args.save_intervall and step % self.args.save_intervall == 0:
-                    self.model.save(step)
+                    self.model.save(epoch)
+        # return step, epoch stopped
+        return step, epoch
 
     def validate(self, test_loader: DataLoader) -> Tuple[Dict[str, float], bool]:
         # set to eval mode
@@ -141,7 +146,9 @@ class Trainer:
         with tqdm(total=len(test_loader), desc="Validation", leave=False) as test_pbar:
             for batch in test_loader:
                 # test step, update running loss
-                outputs = outputs.append(self.test_step(*[x.to(self.device, non_blocking=True) for x in batch]), ignore_index=True)
+                outputs = outputs.append(
+                    self.test_step(*[x.to(self.device, non_blocking=True) for x in batch]), ignore_index=True
+                )
                 # compute step metrics
                 metrics = self.log_step(outputs)
                 # progress bar
@@ -160,16 +167,20 @@ class Trainer:
         # log to mlflow
         mlflow.log_metrics({"eval_" + k: v for k, v in metrics.items()})
         return {"eval_" + k: v for k, v in metrics.items()}
-        
+
     def log_epoch(self, outputs: pd.DataFrame) -> Dict[str, float]:
-        metrics = self.epoch_metrics(outputs["prediction"].tolist(), outputs["label"].tolist()) if self.epoch_metrics else {}
+        metrics = (
+            self.epoch_metrics(outputs["prediction"].tolist(), outputs["label"].tolist()) if self.epoch_metrics else {}
+        )
         return {
             "loss": outputs["loss"].mean(),
             **metrics,
         }
 
     def log_step(self, outputs: pd.DataFrame) -> Dict[str, float]:
-        metrics = self.step_metrics(outputs.iloc[-1]["prediction"], outputs.iloc[-1]["label"]) if self.step_metrics else {}
+        metrics = (
+            self.step_metrics(outputs.iloc[-1]["prediction"], outputs.iloc[-1]["label"]) if self.step_metrics else {}
+        )
         return {
             "loss": outputs.iloc[-1]["loss"],
             **metrics,
@@ -183,11 +194,11 @@ class Trainer:
         output.loss.backward()
         self.optim.step()
         # return losses
-        return {"loss": output.loss.item(), "prediction": output.prediction.cpu(), "label": y.cpu()}
+        return {"loss": output.loss.item(), "prediction": output.prediction.detach().cpu(), "label": y.cpu()}
 
     @torch.no_grad()
     def test_step(self, x: Tensor, y: Optional[Tensor] = None) -> Dict[str, float]:
         # forward pass
         output: ModelOutput = self.model(x, y)
         # return losses
-        return {"loss": output.loss.item(), "prediction": output.prediction.cpu(), "label": y.cpu()}
+        return {"loss": output.loss.item(), "prediction": output.prediction.detach().cpu(), "label": y.cpu()}
