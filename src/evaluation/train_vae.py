@@ -15,8 +15,8 @@ mlflow.set_tracking_uri(getattr(backend_stores, DATASET))
 # load datasets
 train_dataset, vae_train_dataset, val_dataset, test_dataset = load_datasets()
 
-VAE_EPOCHS = 50
-for z_dim in [10]:
+VAE_EPOCHS = 300
+for z_dim in [12]:
     for beta in [1.0]:
         mlflow.set_experiment(f"Z_DIM {z_dim}")
         vae_config = VAEConfig(z_dim=z_dim, beta=beta)
