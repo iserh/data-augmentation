@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 from utils.trainer import TrainingArguments
 from vae.models import VAEConfig, VAEForDataAugmentation
-from vae.models.architectures import VAEModelV1
+from vae.models.architectures import VAEModelV2
 from vae.trainer import VAETrainer
 from vae.visualization import visualize_images, visualize_latents, visualize_real_fake_images
 from numpy import ceil
@@ -34,7 +34,7 @@ def train_vae_on_classes(
             torch.manual_seed(seed)
         # create model
         vae_config.attr = {"label": label.item()}
-        model = VAEModelV1(vae_config)
+        model = VAEModelV2(vae_config)
 
         # get data of label
         train_mask = y_train == label
@@ -91,7 +91,7 @@ def train_vae_on_dataset(
     if seed is not None:
         torch.manual_seed(seed)
     # create model
-    model = VAEModelV1(vae_config)
+    model = VAEModelV2(vae_config)
     if save_every_n_epochs is not None:
         training_args.save_intervall = save_every_n_epochs * ceil(len(train_dataset) / training_args.batch_size).astype(int)
 

@@ -10,6 +10,3 @@ sections = [ "FUTURE", "STDLIB", "THIRDPARTY", "DATA_AUGMENTATION", "FIRSTPARTY"
 
 [tool.black]
 line-length = 120
-
-[project.paths]
-model_root = "pretrained_models/MNIST/CLASS"

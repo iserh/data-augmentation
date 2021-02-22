@@ -10,11 +10,9 @@ from vae.models import VAEConfig
 from evaluation.models import CNNMNIST
 from evaluation.train_model import train_model
 from evaluation.create_datasets import DATASET, DATASET_LIMIT, load_datasets
-import toml
 
 # Parameter for classification task
 SEED = 1337
-pyproject = toml.load("pyproject.toml")
 training_args = TrainingArguments(
     total_steps=5000,
     batch_size=32,
@@ -37,10 +35,6 @@ torch.manual_seed(SEED)
 
 # load datasets
 train_dataset, vae_train_dataset, val_dataset, test_dataset = load_datasets()
-
-pyproject["project"]["paths"]["model_root"] = "pretrained_models/MNIST/SINGLE"
-with open("pyproject.toml", "w") as f:
-    toml.dump(pyproject, f)
 
 for z_dim in [2, 10, 20, 50, 100]:
     for beta in [1.0]:

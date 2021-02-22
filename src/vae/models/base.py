@@ -15,7 +15,8 @@ from yaml.loader import SafeLoader
 from utils.models import BaseModel, ModelConfig, ModelOutput
 
 from .loss import VAELoss, VAELossOutput
-import toml
+
+model_store = Path("pretrained_models/CIFAR10")
 
 
 @dataclass
@@ -82,8 +83,6 @@ class VAEModel(BaseModel):
 
 
 def _load_pretrained_model(config: VAEConfig, epochs: int) -> VAEModel:
-    # model location
-    model_store = Path(toml.load("pyproject.toml")["project"]["paths"]["model_root"])
     # iterate models dir
     for folder in model_store.iterdir():
         # read the config file
@@ -116,8 +115,6 @@ def _load_torch_model_and_return(model_path: Path, config: VAEConfig) -> VAEMode
 
 
 def _save_model(model: VAEModel, epochs: int) -> None:
-    # model location
-    model_store = Path(toml.load("pyproject.toml")["project"]["paths"]["model_root"])
     # create model config
     config = model.config
     # create model folder

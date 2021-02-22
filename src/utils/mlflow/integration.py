@@ -3,7 +3,7 @@ import os
 from collections import namedtuple
 
 backend_stores = namedtuple("BackendStores", ["Default", "MNIST", "CIFAR10"])(
-    Default="experiments/Default", MNIST="experiments/MNIST", CelebA="experiments/CIFAR10"
+    Default="experiments/Default", MNIST="experiments/MNIST", CIFAR10="experiments/CIFAR10"
 )
 
 
