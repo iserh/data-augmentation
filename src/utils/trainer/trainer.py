@@ -54,16 +54,17 @@ class Trainer:
 
         # raise error if both 'total steps' and 'epochs' provided in train args
         if self.args.total_steps is not None:
+            self.total_steps = self.args.total_steps
             if self.args.epochs is not None:
                 raise ValueError("Only specify 'epochs' or 'total_steps' in training arguments!")
         # use 'epochs' parameter if 'total_steps' is not defined
         elif self.args.epochs is not None:
-            self.args.total_steps = self.args.epochs * len(train_loader)
+            self.total_steps = self.args.epochs * len(train_loader)
         # raise error if none of 'epochs' or 'total_steps' is defined
         else:
             raise ValueError("You must either specify 'epochs' or 'total_steps' in training arguments!")
         # set validation intervall
-        self.args.validation_intervall = self.args.validation_intervall or len(train_loader)
+        self.validation_intervall = self.args.validation_intervall or len(train_loader)
 
         # log config
         mlflow.log_params(self.args.__dict__)
@@ -88,16 +89,18 @@ class Trainer:
         batch = next(train_iterator)
         # set early stop initially to False
         early_stop = False
-        with tqdm(total=self.args.total_steps, desc="Training epoch 1") as pbar:
-            for step in range(1, self.args.total_steps + 1):
+        with tqdm(total=self.total_steps, desc="Training epoch 1") as pbar:
+            for step in range(1, self.total_steps + 1):
                 # set model to train mode
                 self.model.train()
+                out = self.train_step(*[x.to(self.device, non_blocking=True) for x in batch])
                 # train one step and remember outputs
-                outputs = outputs.append(
-                    self.train_step(*[x.to(self.device, non_blocking=True) for x in batch]), ignore_index=True
+                outputs = pd.concat(
+                    [outputs, pd.DataFrame(out)],
+                    ignore_index=True,
                 )
                 # compute step metrics
-                metrics = self.log_step(outputs)
+                metrics = self.log_step(outputs.iloc[-len(batch):], train=True)
                 # log to mlflow
                 mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=step)
                 # progress bar
@@ -105,9 +108,13 @@ class Trainer:
                 pbar.update(1)
 
                 # validation on val dataset
-                if step % self.args.validation_intervall == 0:
+                if step % self.validation_intervall == 0:
                     val_metrics, early_stop = self.validate(test_loader)
                     mlflow.log_metrics({"test_" + k: v for k, v in val_metrics.items()}, step=step)
+                
+                # optional save model
+                if self.args.save_model and self.args.save_intervall and step % self.args.save_intervall == 0:
+                    self.model.save(epoch)
 
                 # get the next batch or None if end of trainloader is reached
                 batch = next(train_iterator, None)
@@ -118,22 +125,19 @@ class Trainer:
                     # get the next batch
                     batch = next(train_iterator)
                     # compute epoch metrics
-                    metrics = self.log_step(outputs)
+                    metrics = self.log_epoch(outputs, train=True)
                     # log epoch metrics
                     mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=epoch)
                     # reset outputs
                     outputs = pd.DataFrame()
                     # update epoch counter and tqdm description
-                    if not step >= self.args.total_steps:
+                    if not step >= self.total_steps:
                         epoch += 1
                         pbar.set_description(f"Training epoch {epoch}", refresh=True)
 
                 if early_stop:
                     break
-
-                # optional save model
-                if self.args.save_model and self.args.save_intervall and step % self.args.save_intervall == 0:
-                    self.model.save(epoch)
+                
         # return step, epoch stopped
         return step, epoch
 
@@ -146,43 +150,52 @@ class Trainer:
         with tqdm(total=len(test_loader), desc="Validation", leave=False) as test_pbar:
             for batch in test_loader:
                 # test step, update running loss
-                outputs = outputs.append(
-                    self.test_step(*[x.to(self.device, non_blocking=True) for x in batch]), ignore_index=True
+                outputs = pd.concat(
+                    [outputs, pd.DataFrame(self.test_step(*[x.to(self.device, non_blocking=True) for x in batch]))],
+                    ignore_index=True,
                 )
-                # compute step metrics
-                metrics = self.log_step(outputs)
+                metrics = self.log_step(outputs.iloc[-len(batch):], train=False)
                 # progress bar
                 test_pbar.set_postfix({k: f"{v:7.2f}" for k, v in metrics.items()})
                 test_pbar.update(1)
         # compute epoch metrics and concat with step metrics of last step
-        metrics = {**metrics, **self.log_epoch(outputs)}
+        metrics = {**metrics, **self.log_epoch(outputs, train=False)}
         # return validation metrics and early stop
         return metrics, self.args.early_stopping and self.early_stop_monitor(outputs["loss"].mean())
 
     def evaluate(self) -> Dict[str, float]:
         # create test_loader
         test_loader = DataLoader(self.test_dataset, batch_size=512, shuffle=False, pin_memory=True, num_workers=4)
+        # tmp save model
+        model = self.model
+        self.model = self.best_model
         # call validate
+        print("Evaluating model.")
         metrics, _ = self.validate(test_loader)
+        self.model = model
         # log to mlflow
         mlflow.log_metrics({"eval_" + k: v for k, v in metrics.items()})
         return {"eval_" + k: v for k, v in metrics.items()}
 
-    def log_epoch(self, outputs: pd.DataFrame) -> Dict[str, float]:
-        metrics = (
-            self.epoch_metrics(outputs["prediction"].tolist(), outputs["label"].tolist()) if self.epoch_metrics else {}
-        )
+    def log_epoch(self, outputs: pd.DataFrame, train: bool = False) -> Dict[str, float]:
+        metrics = self.epoch_metrics(outputs["prediction"], outputs["label"], train=train) if self.epoch_metrics else {}
+        # save best model
+        if self.args.save_best_metric is not None and metrics.get(self.args.save_best_metric, False):
+            self.best_model = self.model.__class__(self.model.config).to(self.model.config.device)
+            self.best_model.load_state_dict(self.model.state_dict())
         return {
             "loss": outputs["loss"].mean(),
             **metrics,
         }
 
-    def log_step(self, outputs: pd.DataFrame) -> Dict[str, float]:
-        metrics = (
-            self.step_metrics(outputs.iloc[-1]["prediction"], outputs.iloc[-1]["label"]) if self.step_metrics else {}
-        )
+    def log_step(self, outputs: pd.DataFrame, train: bool = False) -> Dict[str, float]:
+        metrics = self.step_metrics(outputs["prediction"], outputs["label"], train=train) if self.step_metrics else {}
+        # save best model
+        if self.args.save_best_metric is not None and metrics.get(self.args.save_best_metric, False):
+            self.best_model = self.model.__class__(self.model.config)
+            self.best_model.load_state_dict(self.model.state_dict())
         return {
-            "loss": outputs.iloc[-1]["loss"],
+            "loss": outputs["loss"].mean(),
             **metrics,
         }
 

@@ -15,7 +15,7 @@ class VAELossOutput:
         (self.r_loss + self.kl_loss).backward()
 
     def item(self) -> Tuple[float, float]:
-        return self.r_loss.item(), self.kl_loss.item()
+        return VAELossOutput(self.r_loss.item(), self.kl_loss.item())
 
     def __add__(self, other: "VAELossOutput") -> "VAELossOutput":
         if not isinstance(other, VAELossOutput):

@@ -15,8 +15,7 @@ from yaml.loader import SafeLoader
 from utils.models import BaseModel, ModelConfig, ModelOutput
 
 from .loss import VAELoss, VAELossOutput
-
-model_store = Path("./pretrained_models/MNIST")
+import toml
 
 
 @dataclass
@@ -83,6 +82,8 @@ class VAEModel(BaseModel):
 
 
 def _load_pretrained_model(config: VAEConfig, epochs: int) -> VAEModel:
+    # model location
+    model_store = Path(toml.load("pyproject.toml")["project"]["paths"]["model_root"])
     # iterate models dir
     for folder in model_store.iterdir():
         # read the config file
@@ -115,12 +116,14 @@ def _load_torch_model_and_return(model_path: Path, config: VAEConfig) -> VAEMode
 
 
 def _save_model(model: VAEModel, epochs: int) -> None:
+    # model location
+    model_store = Path(toml.load("pyproject.toml")["project"]["paths"]["model_root"])
     # create model config
     config = model.config
     # create model folder
-    suffix = "_" + datetime.now().strftime("%y%m%d_%H%M%S")
+    suffix = datetime.now().strftime("%y%m%d_%H%M%S")
     filename = model_store / suffix
-    filename.mkdir(parents=True)
+    filename.mkdir(parents=True, exist_ok=True)
     # save model's state_dict
     torch.save(model.state_dict(), filename / "state_dict.pt")
     # save model config

@@ -16,3 +16,4 @@ class TrainingArguments:
     early_stopping: bool = False
     early_stopping_window: int = 10
     validation_intervall: Optional[int] = None
+    save_best_metric: Optional[str] = None

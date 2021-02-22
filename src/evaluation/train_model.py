@@ -41,7 +41,7 @@ def train_model(
         train_dataset=train_dataset,
         dev_dataset=dev_dataset,
         test_dataset=test_dataset,
-        step_metrics=step_metrics,
+        epoch_metrics=BestTracker(),
     )
     # train model
     trainer.train()
@@ -49,17 +49,30 @@ def train_model(
     return trainer.evaluate()
 
 
-def step_metrics(predictions: Tensor, labels: Tensor) -> Dict[str, float]:
-    """Metrics for the trainer class, that are computed each train/eval step.
+class BestTracker:
 
-    Args:
-        predictions (Tensor): The predictions batch
-        labels (Tensor): The true label batch
+    def __init__(self) -> None:
+        self.best_acc = 0
+    
+    def __call__(self, predictions: Tensor, labels: Tensor, train: bool) -> Dict[str, float]:
+        """Metrics for the trainer class, that are computed each train/eval step.
 
-    Returns:
-        Dict[str, float]: Computed metrics
-    """
-    return {
-        "acc": accuracy_score(labels, predictions),
-        "f1": f1_score(labels, predictions, average="weighted"),
-    }
+        Args:
+            predictions (Tensor): The predictions batch
+            labels (Tensor): The true label batch
+
+        Returns:
+            Dict[str, float]: Computed metrics
+        """
+        acc = accuracy_score(labels, predictions)
+        f1 = f1_score(labels, predictions, average="weighted")
+        if (not train) and acc > self.best_acc:
+            self.best_acc = acc
+            log_best = {"best_acc": acc}
+        else:
+            log_best = {}
+        return {
+            "acc": acc,
+            "f1": f1,
+            **log_best
+        }

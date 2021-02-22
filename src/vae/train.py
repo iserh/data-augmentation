@@ -11,6 +11,7 @@ from vae.models import VAEConfig, VAEForDataAugmentation
 from vae.models.architectures import VAEModelV1
 from vae.trainer import VAETrainer
 from vae.visualization import visualize_images, visualize_latents, visualize_real_fake_images
+from numpy import ceil
 
 
 def train_vae_on_classes(
@@ -18,11 +19,9 @@ def train_vae_on_classes(
     train_dataset: Dataset,
     test_dataset: Dataset,
     vae_config: VAEConfig,
+    save_every_n_epochs: Optional[int] = None,
     seed: Optional[int] = None,
 ) -> None:
-    # initialize mlflow experiment
-    mlflow.set_experiment("VAE Training")
-
     # load train/test data
     x_train, y_train = next(iter(DataLoader(train_dataset, batch_size=len(train_dataset))))
     x_test, y_test = next(iter(DataLoader(test_dataset, batch_size=len(test_dataset))))
@@ -42,6 +41,9 @@ def train_vae_on_classes(
         test_mask = y_test == label
         train_dataset = TensorDataset(x_train[train_mask], y_train[train_mask])
         test_dataset = TensorDataset(x_test[test_mask], y_test[test_mask])
+
+        if save_every_n_epochs is not None:
+            training_args.save_intervall = save_every_n_epochs * ceil(len(train_dataset) / training_args.batch_size).astype(int)
 
         # trainer
         trainer = VAETrainer(
@@ -82,16 +84,17 @@ def train_vae_on_dataset(
     train_dataset: Dataset,
     test_dataset: Dataset,
     vae_config: VAEConfig,
+    save_every_n_epochs: Optional[int] = None,
     seed: Optional[int] = None,
 ) -> None:
-    # initialize mlflow experiment
-    mlflow.set_experiment("VAE Training")
-
     # seed
     if seed is not None:
         torch.manual_seed(seed)
     # create model
     model = VAEModelV1(vae_config)
+    if save_every_n_epochs is not None:
+        training_args.save_intervall = save_every_n_epochs * ceil(len(train_dataset) / training_args.batch_size).astype(int)
+
     # trainer
     trainer = VAETrainer(
         args=training_args,
@@ -99,6 +102,7 @@ def train_vae_on_dataset(
         train_dataset=train_dataset,
         dev_dataset=test_dataset,
     )
+    
 
     print("Training VAE on dataset")
     # start training
@@ -133,7 +137,7 @@ if __name__ == "__main__":
 
     DATASET = "MNIST"
     VAE_EPOCHS = 25
-    vae_config = VAEConfig(z_dim=10, beta=1.0)
+    vae_config = VAEConfig(z_dim=10, beta=0.3)
     mlflow.set_tracking_uri(getattr(backend_stores, DATASET))
 
     # load test dataset
