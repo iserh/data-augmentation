@@ -2,11 +2,20 @@ from typing import Any, Union
 
 import torch
 from torchvision import transforms
-from torchvision.datasets import MNIST, CelebA
+from torchvision.datasets import MNIST, CelebA, CIFAR10
 
 
 def _get_mnist(train: bool = False) -> MNIST:
     return MNIST(
+        root="~/torch_datasets",
+        transform=transforms.ToTensor(),
+        train=train,
+        target_transform=torch.as_tensor,
+    )
+
+
+def _get_cifar10(train: bool = False) -> CIFAR10:
+    return CIFAR10(
         root="~/torch_datasets",
         transform=transforms.ToTensor(),
         train=train,
@@ -33,6 +42,7 @@ def _get_celeba(train: bool = False, target_type: str = "identity") -> CelebA:
 _datasets = {
     "MNIST": _get_mnist,
     "CelebA": _get_celeba,
+    "CIFAR10": _get_cifar10,
 }
 
 
