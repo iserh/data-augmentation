@@ -16,7 +16,7 @@ from utils.models import BaseModel, ModelConfig, ModelOutput
 
 from .loss import VAELoss, VAELossOutput
 
-model_store = Path("pretrained_models/Default")
+model_store = "pretrained_models/Default"
 
 
 @dataclass
@@ -84,7 +84,7 @@ class VAEModel(BaseModel):
 
 def _load_pretrained_model(config: VAEConfig, epochs: int) -> VAEModel:
     # iterate models dir
-    for folder in model_store.iterdir():
+    for folder in Path(model_store).iterdir():
         # read the config file
         with open(folder / "config.yml", "r") as yml_file:
             model_dict = yaml.load(yml_file, Loader=SafeLoader)
@@ -119,7 +119,7 @@ def _save_model(model: VAEModel, epochs: int) -> None:
     config = model.config
     # create model folder
     suffix = datetime.now().strftime("%y%m%d_%H%M%S")
-    filename = model_store / suffix
+    filename = Path(model_store) / suffix
     filename.mkdir(parents=True, exist_ok=True)
     # save model's state_dict
     torch.save(model.state_dict(), filename / "state_dict.pt")
