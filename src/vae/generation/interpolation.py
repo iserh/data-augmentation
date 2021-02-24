@@ -48,7 +48,7 @@ def interpolate_along_class(latents: Tensor, targets: Tensor, n_steps: int) -> T
         interpolated.append(torch.Tensor(pca.inverse_transform(x)))
         corresponding_targets.append(torch.Tensor([i] * n_steps))
 
-    return torch.cat(interpolated, dim=0), torch.cat(corresponding_targets, dim=0)
+    return torch.stack(interpolated, dim=0), torch.stack(corresponding_targets, dim=0)
 
 
 def interpolate_along_dimension(z: Tensor, n_steps: int) -> Tensor:
@@ -58,4 +58,4 @@ def interpolate_along_dimension(z: Tensor, n_steps: int) -> Tensor:
         x = np.linspace(z[dim] - 3, z[dim] + 3, n_steps)
         other_dims[:, dim] = torch.Tensor(x)
         interpolated.append(other_dims)
-    return torch.cat(interpolated, dim=0)
+    return torch.stack(interpolated, dim=0)
