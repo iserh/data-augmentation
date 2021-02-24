@@ -16,7 +16,7 @@ from utils.models import BaseModel, ModelConfig, ModelOutput
 
 from .loss import VAELoss, VAELossOutput
 
-model_store = Path("pretrained_models/KMNIST")
+model_store = Path("pretrained_models/Default")
 
 
 @dataclass
