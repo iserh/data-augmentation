@@ -1,5 +1,5 @@
 """Train VAE example."""
-from typing import Optional
+from typing import Optional, Type
 
 import mlflow
 import torch
@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 from utils.trainer import TrainingArguments
 from vae.models import VAEConfig, VAEForDataAugmentation
-from vae.models.architectures import VAEModelV2
+from vae.models.base import VAEModel
 from vae.trainer import VAETrainer
 from vae.visualization import visualize_images, visualize_latents, visualize_real_fake_images
 from numpy import ceil
@@ -19,6 +19,7 @@ def train_vae_on_classes(
     train_dataset: Dataset,
     test_dataset: Dataset,
     vae_config: VAEConfig,
+    model_architecture: Type[VAEModel],
     save_every_n_epochs: Optional[int] = None,
     seed: Optional[int] = None,
 ) -> None:
@@ -34,7 +35,7 @@ def train_vae_on_classes(
             torch.manual_seed(seed)
         # create model
         vae_config.attr = {"label": label.item()}
-        model = VAEModelV2(vae_config)
+        model = model_architecture(vae_config)
 
         # get data of label
         train_mask = y_train == label
@@ -84,6 +85,7 @@ def train_vae_on_dataset(
     train_dataset: Dataset,
     test_dataset: Dataset,
     vae_config: VAEConfig,
+    model_architecture: Type[VAEModel],
     save_every_n_epochs: Optional[int] = None,
     seed: Optional[int] = None,
 ) -> None:
@@ -91,7 +93,7 @@ def train_vae_on_dataset(
     if seed is not None:
         torch.manual_seed(seed)
     # create model
-    model = VAEModelV2(vae_config)
+    model = model_architecture(vae_config)
     if save_every_n_epochs is not None:
         training_args.save_intervall = save_every_n_epochs * ceil(len(train_dataset) / training_args.batch_size).astype(int)
 
@@ -132,18 +134,43 @@ def train_vae_on_dataset(
 
 
 if __name__ == "__main__":
-    from utils.data import get_dataset
     from utils.mlflow import backend_stores
+    from utils.trainer import TrainingArguments
+    from vae.models import VAEConfig
+    from vae.models.architectures import VAEModelV1
+
+    from utils.data import load_datasets
+
+    # *** Seeding, loading data & setting up mlflow logging ***
 
     DATASET = "MNIST"
-    VAE_EPOCHS = 25
-    vae_config = VAEConfig(z_dim=10, beta=0.3)
+    DATASET_LIMIT = 50
+    SEED = 1337
+
+    # set the backend store uri of mlflow
     mlflow.set_tracking_uri(getattr(backend_stores, DATASET))
+    # seed torch
+    torch.manual_seed(SEED)
+    # load datasets
+    train_dataset, vae_train_dataset, val_dataset, test_dataset = load_datasets(DATASET)
 
-    # load test dataset
-    test_dataset = get_dataset(DATASET, train=False)
-    # load train dataset
-    train_dataset = get_dataset(DATASET, train=True)
+    # *** Training the VAE ***
 
-    # * VAE Training: uncomment these 2 line to train the vae
-    train_vae_on_dataset(TrainingArguments(epochs=VAE_EPOCHS, seed=1337), train_dataset, test_dataset, vae_config)
+    for z_dim in [3]:
+        for beta in [1.0]:
+            for vae_epochs in [200]:
+                # set mlflow experiment
+                mlflow.set_experiment(f"Z_DIM {z_dim}")
+                print(f"Training VAE with {z_dim=}, {beta=}, {vae_epochs=}")
+                # create a vae config
+                vae_config = VAEConfig(z_dim=z_dim, beta=beta)
+                # train vae
+                train_vae_on_classes(
+                    training_args=TrainingArguments(vae_epochs, seed=SEED, batch_size=64),
+                    train_dataset=vae_train_dataset,
+                    test_dataset=val_dataset,
+                    vae_config=vae_config,
+                    model_architecture=VAEModelV1,
+                    save_every_n_epochs=25,
+                    seed=SEED,
+                )
