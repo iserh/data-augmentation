@@ -11,7 +11,7 @@ from vae.models.base import VAEOutput
 
 
 class VAETrainer(Trainer):
-    def log_epoch(self, outputs: pd.DataFrame, train: bool = False) -> Dict[str, float]:
+    def log_epoch(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
         metrics = (
             self.epoch_metrics(outputs["prediction"], outputs["label"]) if self.epoch_metrics else {}
         )
@@ -22,7 +22,7 @@ class VAETrainer(Trainer):
             **metrics,
         }
 
-    def log_step(self, outputs: pd.DataFrame, train: bool = False) -> Dict[str, float]:
+    def log_step(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
         metrics = (
             self.step_metrics(outputs["prediction"], outputs["label"]) if self.step_metrics else {}
         )
