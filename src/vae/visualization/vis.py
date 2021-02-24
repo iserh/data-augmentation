@@ -32,7 +32,10 @@ def visualize_latents(
     else:
         ax.scatter(*latents.T, label="z")
     plt.legend()
-    mlflow.log_figure(fig, img_name + ".png")
+    if mlflow.active_run() is not None:
+        mlflow.log_figure(fig, img_name + ".png")
+    else:
+        return fig
     plt.close()
 
 
@@ -92,7 +95,10 @@ def visualize_real_fake_images(
             )
         )
 
-    mlflow.log_figure(fig, img_name + ".png")
+    if mlflow.active_run() is not None:
+        mlflow.log_figure(fig, img_name + ".png")
+    else:
+        return fig
     plt.close()
 
 
@@ -111,17 +117,8 @@ def visualize_images(images: Tensor, n: int, img_name: str = "images", cols: int
         )
     )
 
-    mlflow.log_figure(fig, img_name + ".png")
+    if mlflow.active_run() is not None:
+        mlflow.log_figure(fig, img_name + ".png")
+    else:
+        return fig
     plt.close()
-
-
-if __name__ == "__main__":
-    from utils.integrations import BackendStore, ExperimentName
-
-    mlflow.set_tracking_uri(BackendStore.MNIST.value)
-    mlflow.set_experiment(ExperimentName.FeatureSpace.value)
-
-    with mlflow.start_run():
-        latents = torch.empty((200, 2)).normal_(1, 1)
-        pca = PCA(2).fit(latents) if latents.size(1) > 0 else None
-        visualize_latents(latents, pca)
