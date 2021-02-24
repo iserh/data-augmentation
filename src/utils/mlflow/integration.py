@@ -2,8 +2,12 @@
 import os
 from collections import namedtuple
 
-backend_stores = namedtuple("BackendStores", ["Default", "MNIST", "CIFAR10"])(
-    Default="experiments/Default", MNIST="experiments/MNIST", CIFAR10="experiments/CIFAR10"
+backend_stores = namedtuple("BackendStores", ["Default", "MNIST", "CIFAR10", "Omniglot", "KMNIST"])(
+    Default="experiments/Default",
+    MNIST="experiments/MNIST",
+    CIFAR10="experiments/CIFAR10",
+    Omniglot="experiments/Omniglot",
+    KMNIST="experiments/KMNIST",
 )
 
 

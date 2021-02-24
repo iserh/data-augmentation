@@ -2,7 +2,7 @@ from typing import Any, Union
 
 import torch
 from torchvision import transforms
-from torchvision.datasets import MNIST, CelebA, CIFAR10
+from torchvision.datasets import MNIST, CelebA, CIFAR10, Omniglot, KMNIST
 
 
 def _get_mnist(train: bool = False) -> MNIST:
@@ -39,12 +39,42 @@ def _get_celeba(train: bool = False, target_type: str = "identity") -> CelebA:
     )
 
 
+def _get_kmnist(train: bool = False) -> MNIST:
+    return KMNIST(
+        root="~/torch_datasets",
+        transform=transforms.ToTensor(),
+        train=train,
+        target_transform=torch.as_tensor,
+    )
+
+
+def _get_omniglot(train: bool = False) -> Omniglot:
+    return Omniglot(
+        root="~/torch_datasets",
+        transform=transforms.ToTensor(),
+        background=True,
+        target_transform=torch.as_tensor,
+    )
+
+
 _datasets = {
     "MNIST": _get_mnist,
     "CelebA": _get_celeba,
     "CIFAR10": _get_cifar10,
+    "Omniglot": _get_omniglot,
+    "KMNIST": _get_kmnist,
 }
 
 
 def get_dataset(name: str, *args: Any, **kwargs: Any) -> Union[MNIST, CelebA]:
     return _datasets[name](*args, **kwargs)
+
+
+if __name__ == "__main__":
+    from torch.utils.data import DataLoader
+
+    dataset = get_dataset("KMNIST", train=True)
+    dataloader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
+    x, y = next(iter(dataloader))
+    print(x.size())
+    print(y.size(), f"max={y.max().item()}, min={y.min().item()}")
