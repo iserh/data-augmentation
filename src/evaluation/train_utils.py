@@ -121,7 +121,7 @@ if __name__ == "__main__":
     VAE_EPOCHS = 50
     Z_DIM = 10
     BETA = 1.0
-    AUGMENTATION = augmentations.REPARAMETRIZATION
+    AUGMENTATION = augmentations.DISTRIBUTION
     augmentation_params = {"K": 450}
 
     # *** Training the CNN ***

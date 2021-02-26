@@ -14,6 +14,7 @@ from . import augmentations
 from .reparametrization import apply_reparametrization
 from .interpolation import apply_interpolation, apply_extrapolation
 from .noise import add_noise, normal_noise
+from .distribution import apply_distribution
 
 implementations = {
     augmentations.INTERPOLATION: apply_interpolation,
@@ -21,7 +22,7 @@ implementations = {
     augmentations.REPARAMETRIZATION: apply_reparametrization,
     augmentations.ADD_NOISE: add_noise,
     augmentations.NORMAL_NOISE: normal_noise,
-    augmentations.DISTRIBUTION: NotImplemented,
+    augmentations.DISTRIBUTION: apply_distribution,
 }
 
 
