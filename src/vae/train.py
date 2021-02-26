@@ -10,7 +10,7 @@ from utils.trainer import TrainingArguments
 from vae.models import VAEConfig, VAEForDataAugmentation
 from vae.models.base import VAEModel
 from vae.trainer import VAETrainer
-from vae.visualization import visualize_images, visualize_latents, visualize_real_fake_images
+from vae.visualization import visualize_images, visualize_latents, visualize_heritages_partners
 from numpy import ceil
 
 
@@ -70,7 +70,15 @@ def train_vae_on_classes(
                 targets=test_dataset.tensors[1],
                 color_by_target=True,
             )
-            visualize_real_fake_images(test_dataset.tensors[0], fakes, n=50, cols=8)
+            visualize_heritages_partners(
+                fakes,
+                test_dataset.tensors[0],
+                n=50,
+                cols=5,
+                filename="Real-Fake",
+                img_title="Fakes",
+                heritage_title="Original",
+            )
 
             # random images
             z = torch.normal(0, 1, size=(200, vae_config.z_dim))
@@ -123,7 +131,15 @@ def train_vae_on_dataset(
             targets=labels,
             color_by_target=True,
         )
-        visualize_real_fake_images(reals, fakes, n=50, cols=8)
+        visualize_heritages_partners(
+            images=fakes,
+            heritages=reals,
+            n=50,
+            cols=5,
+            filename="Real-Fake",
+            img_title="Fakes",
+            heritage_title="Original",
+        )
 
         # random images
         z = torch.normal(0, 1, size=(200, vae_config.z_dim))

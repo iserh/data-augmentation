@@ -8,33 +8,27 @@ from sklearn.neighbors import NearestNeighbors
 from torch import Tensor
 
 
-class Interpolation:
-    def __init__(self, alpha: float, k: int = 3, return_indices: bool = False) -> None:
-        self.alpha = alpha
-        self.k = k
-        self.return_indices = return_indices
+def apply_interpolation(latents: Tensor, log_vars: Tensor, n_neighbors: int, alpha: float, **kwargs) -> Tuple[Tensor, Tensor]:
+    # build nearest neighbour tree, k + 1 because the first neighbour is the point itself
+    nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1, algorithm="ball_tree").fit(latents)
+    # get indices of k nearest neighbours for each latent vector
+    _, indices = nbrs.kneighbors(latents)
+    # the new latents and their root latents
+    new_latents = torch.empty_like(latents)
+    roots = torch.empty_like(latents)
+    for i, idx in enumerate(indices):
+        # choose one of the k nearest neighbors (ignore first one because its the latent vector itself)
+        neighbor = np.random.choice(idx[1:])
+        # interpolate
+        new_latents[i] = (neighbor - latents[i]) * alpha + latents[i]
+        # root is the neighbor
+        roots[i] = neighbor
 
-    def __call__(self, z: Tensor, y: Tensor) -> Tuple[Tensor, Tensor]:
-        # build nearest neighbour tree, k + 1 because the first neighbour is the point itself
-        nbrs = NearestNeighbors(n_neighbors=self.k + 1, algorithm="ball_tree").fit(z)
-        # get indices of k nearest neighbours for each latent vector
-        _, indices = nbrs.kneighbors(z)
-        # generate k new latents for each original latent vector
-        # by interpolating between the k'th nearest neighbour
-        z_ = torch.empty((z.size(0), self.k, *z.size()[1:]), device=z.device, dtype=z.dtype)
-        y_ = torch.empty((y.size(0), self.k, *y.size()[1:]), device=y.device, dtype=y.dtype)
-        for i in range(z.size(0)):
-            # each latent vector generates 'n_neighbor' new latent vectors
-            for j, k in enumerate(indices[i][1:]):
-                # interpolate between latent vector and the k'th nearest neighbour
-                z_[i, j] = (z[k] - z[i]) * self.alpha + z[i]
-                # save the target too
-                y_[i, j] = y[i]
-        # reshape
-        z_ = z_.reshape(-1, z.size(-1))
-        y_ = y_.flatten()
-        # return new modified latents and the corresponding targets as tensors
-        return (z_, y_, indices.reshape(-1)) if self.return_indices else (z_, y_)
+    return new_latents, roots
+
+
+def apply_extrapolation(latents: Tensor, log_vars: Tensor, n_neighbors: int, alpha: float, **kwargs) -> Tuple[Tensor, Tensor]:
+    return apply_interpolation(latents, log_vars, n_neighbors, -alpha, **kwargs)
 
 
 def interpolate_along_class(latents: Tensor, targets: Tensor, n_steps: int) -> Tensor:

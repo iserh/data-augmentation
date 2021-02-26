@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     from utils.mlflow import backend_stores
     from utils.trainer import TrainingArguments
-    from vae.generation import augment_dataset_using_per_class_vaes, augment_dataset_using_single_vae, augmentations
+    from vae.generation import augment_dataset_using_per_class_vaes, augment_dataset_single_vae, augmentations
     from vae.models import VAEConfig
 
     from evaluation.models import CNNMNIST
@@ -145,7 +145,7 @@ if __name__ == "__main__":
                             )
                         # else: conventional vae data augmentation
                         else:
-                            train_dataset = augment_dataset_using_single_vae(
+                            train_dataset = augment_dataset_single_vae(
                                 train_dataset, vae_config, vae_epochs, AUGMENTATION, augmentation_params, seed=SEED
                             )
                     # train cnn

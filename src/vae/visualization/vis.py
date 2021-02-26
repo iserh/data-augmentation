@@ -39,35 +39,25 @@ def visualize_latents(
     plt.close()
 
 
-def visualize_real_fake_images(
-    reals: Tensor,
-    fakes: Tensor,
+def visualize_heritages_partners(
+    images: Tensor,
+    heritages: Tensor,
+    partners: Tensor,
     n: int,
-    img_name: str = "real_fake",
-    k: Optional[int] = None,
-    indices: Optional[np.ndarray] = None,
     cols: int = 10,
+    **kwargs,
 ) -> None:
-    # k: number of generated fake images for each real image
-    k = k or 1
-    # if k > 1 duplicate reals corresponding to the amount of fakes
-    dupl_reals = (
-        reals.unsqueeze(1).expand((reals.size(0), k, *reals.size()[1:])).reshape(-1, *reals.size()[1:])
-        if k > 1
-        else reals
-    )
-
     fig = plt.figure(figsize=(15, 15))
     fig.patch.set_alpha(0.0)
-    n_plots = 3 if indices is not None else 2
+    n_plots = 3 if partners is not None else 2
 
     # Plot the real images
     plt.subplot(1, n_plots, 1)
     plt.axis("off")
-    plt.title("Real Images")
+    plt.title(kwargs.get("heritage_title", "Heritages"))
     plt.imshow(
         np.transpose(
-            vutils.make_grid(dupl_reals[:n], padding=5, normalize=True, nrow=cols or k * 2),
+            vutils.make_grid(heritages[:n], padding=5, normalize=True, nrow=cols),
             (1, 2, 0),
         )
     )
@@ -75,41 +65,41 @@ def visualize_real_fake_images(
     # Plot the fake images
     plt.subplot(1, n_plots, 2)
     plt.axis("off")
-    plt.title("Fake Images")
+    plt.title(kwargs.get("img_title", "Images"))
     plt.imshow(
         np.transpose(
-            vutils.make_grid(fakes[:n], padding=5, normalize=True, nrow=cols or k * 2),
+            vutils.make_grid(images[:n], padding=5, normalize=True, nrow=cols),
             (1, 2, 0),
         )
     )
 
     # plot the images that were used for generation
-    if indices is not None:
+    if partners is not None:
         plt.subplot(1, n_plots, 3)
         plt.axis("off")
-        plt.title("Images used for Generation")
+        plt.title(kwargs.get("partner_title", "Partners"))
         plt.imshow(
             np.transpose(
-                vutils.make_grid(reals[indices[:n]], padding=5, normalize=True, nrow=cols or k * 2),
+                vutils.make_grid(partners[:n], padding=5, normalize=True, nrow=cols),
                 (1, 2, 0),
             )
         )
 
     if mlflow.active_run() is not None:
-        mlflow.log_figure(fig, img_name + ".png")
+        mlflow.log_figure(fig, kwargs.get("filename", "heritages_partners") + ".png")
     else:
         return fig
     plt.close()
 
 
-def visualize_images(images: Tensor, n: int, img_name: str = "images", cols: int = 10) -> None:
+def visualize_images(images: Tensor, n: int, cols: int = 10, img_name: str = "images", title: str = "Images") -> None:
     fig = plt.figure(figsize=(15, 15))
     fig.patch.set_alpha(0.0)
 
     # Plot the real images
     plt.subplot(1, 1, 1)
     plt.axis("off")
-    plt.title("Real Images")
+    plt.title(title)
     plt.imshow(
         np.transpose(
             vutils.make_grid(images[:n], padding=5, normalize=True, nrow=cols),
