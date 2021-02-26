@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torchvision.utils as vutils
 from matplotlib import pyplot as plt
+from matplotlib.figure import Figure
 from sklearn.decomposition import PCA
 from torch import Tensor
 
@@ -15,8 +16,7 @@ def visualize_latents(
     pca: Optional[PCA] = None,
     targets: Optional[Tensor] = None,
     color_by_target: bool = False,
-    img_name: str = "latents",
-) -> None:
+) -> Figure:
     if pca is not None:
         latents = pca.transform(latents)
     # create pyplot figure and axes
@@ -32,38 +32,26 @@ def visualize_latents(
     else:
         ax.scatter(*latents.T, label="z")
     plt.legend()
-    if mlflow.active_run() is not None:
-        mlflow.log_figure(fig, img_name + ".png")
-    else:
-        return fig
-    plt.close()
+    return fig
 
 
-def visualize_heritages_partners(
+def visualize_images(
     images: Tensor,
-    heritages: Tensor,
-    partners: Tensor,
     n: int,
+    heritages: Optional[Tensor] = None,
+    partners: Optional[Tensor] = None,
     cols: int = 10,
     **kwargs,
-) -> None:
+) -> Figure:
     fig = plt.figure(figsize=(15, 15))
     fig.patch.set_alpha(0.0)
-    n_plots = 3 if partners is not None else 2
-
-    # Plot the real images
+    if heritages is None or partners is None:
+        n_plots = 1 if heritages is None and partners is None else 2
+    else:
+        n_plots = 3
+    
+    # Plot the images
     plt.subplot(1, n_plots, 1)
-    plt.axis("off")
-    plt.title(kwargs.get("heritage_title", "Heritages"))
-    plt.imshow(
-        np.transpose(
-            vutils.make_grid(heritages[:n], padding=5, normalize=True, nrow=cols),
-            (1, 2, 0),
-        )
-    )
-
-    # Plot the fake images
-    plt.subplot(1, n_plots, 2)
     plt.axis("off")
     plt.title(kwargs.get("img_title", "Images"))
     plt.imshow(
@@ -72,6 +60,18 @@ def visualize_heritages_partners(
             (1, 2, 0),
         )
     )
+
+    # Plot the heritages
+    if heritages is not None:
+        plt.subplot(1, n_plots, 2)
+        plt.axis("off")
+        plt.title(kwargs.get("heritage_title", "Heritages"))
+        plt.imshow(
+            np.transpose(
+                vutils.make_grid(heritages[:n], padding=5, normalize=True, nrow=cols),
+                (1, 2, 0),
+            )
+        )
 
     # plot the images that were used for generation
     if partners is not None:
@@ -85,30 +85,4 @@ def visualize_heritages_partners(
             )
         )
 
-    if mlflow.active_run() is not None:
-        mlflow.log_figure(fig, kwargs.get("filename", "heritages_partners") + ".png")
-    else:
-        return fig
-    plt.close()
-
-
-def visualize_images(images: Tensor, n: int, cols: int = 10, img_name: str = "images", title: str = "Images") -> None:
-    fig = plt.figure(figsize=(15, 15))
-    fig.patch.set_alpha(0.0)
-
-    # Plot the real images
-    plt.subplot(1, 1, 1)
-    plt.axis("off")
-    plt.title(title)
-    plt.imshow(
-        np.transpose(
-            vutils.make_grid(images[:n], padding=5, normalize=True, nrow=cols),
-            (1, 2, 0),
-        )
-    )
-
-    if mlflow.active_run() is not None:
-        mlflow.log_figure(fig, img_name + ".png")
-    else:
-        return fig
-    plt.close()
+    return fig

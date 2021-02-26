@@ -9,7 +9,9 @@ flake8-docstrings
 flake8-isort
 flake8-use-fstring
 isort
+jupyter
 matplotlib
+mlflow
 nox
 numpy
 pandas

@@ -79,27 +79,28 @@ class BestTracker:
 
 if __name__ == "__main__":
     import mlflow
-
+    import torch
+    import vae
     from utils.mlflow import backend_stores
     from utils.trainer import TrainingArguments
-    from vae.generation import augment_dataset_using_per_class_vaes, augment_dataset_single_vae, augmentations
+    from vae.generation import Generator, augmentations
     from vae.models import VAEConfig
-
     from evaluation.models import CNNMNIST
+    from evaluation.train_utils import train_model
     from utils.data import load_datasets
+
+    vae.models.base.model_store = "pretrained_models/MNIST"
 
     # *** Seeding, loading data & setting up mlflow logging ***
 
-    DATASET = "MNIST"
-    DATASET_LIMIT = 50
     SEED = 1337
-
+    DATASET = "MNIST"
     # set the backend store uri of mlflow
     mlflow.set_tracking_uri(getattr(backend_stores, DATASET))
     # seed torch
     torch.manual_seed(SEED)
     # load datasets
-    train_dataset, vae_train_dataset, val_dataset, test_dataset = load_datasets()
+    train_dataset, _, val_dataset, test_dataset = load_datasets(DATASET)
 
     # *** The parameters for the classification task ***
 
@@ -113,49 +114,41 @@ if __name__ == "__main__":
         early_stopping_window=20,
         save_best_metric="best_acc",
     )
+
     # *** Parameters for data augmentation ***
 
-    MULTI_VAE = True
-    AUGMENTATION = augmentations.RANDOM_NOISE
-    augmentation_params = {"k": 9}
+    MULTI_VAE = False
+    VAE_EPOCHS = 50
+    Z_DIM = 10
+    BETA = 1.0
+    AUGMENTATION = augmentations.REPARAMETRIZATION
+    augmentation_params = {"K": 450}
 
     # *** Training the CNN ***
 
-    for z_dim in [3]:
-        for beta in [1.0]:
-            for vae_epochs in [10, 20, 30, 50]:
-                # create a vae config
-                vae_config = VAEConfig(z_dim=z_dim, beta=beta)
-                # start mlflow run in experiment
-                mlflow.set_experiment(f"CNN Z_DIM {z_dim}")
-                print(f"Training CNN" + "augmented with {z_dim=}, {beta=}, {vae_epochs=}" if AUGMENTATION is not None else "")
-                with mlflow.start_run(run_name=AUGMENTATION or "baseline"):
-                    # log dataset limit
-                    mlflow.log_param("dataset_limit", DATASET_LIMIT)
-                    # perform data augmentation if specified
-                    if AUGMENTATION is not None:
-                        # log MULTI_VAE flag
-                        mlflow.log_param("multi_vae", MULTI_VAE)
-                        # log vae epochs
-                        mlflow.log_param("vae_epochs", vae_epochs)
-                        # if MULTI_VAE, augment data of each label seperately
-                        if MULTI_VAE:
-                            train_dataset = augment_dataset_using_per_class_vaes(
-                                train_dataset, vae_config, vae_epochs, AUGMENTATION, augmentation_params, seed=SEED
-                            )
-                        # else: conventional vae data augmentation
-                        else:
-                            train_dataset = augment_dataset_single_vae(
-                                train_dataset, vae_config, vae_epochs, AUGMENTATION, augmentation_params, seed=SEED
-                            )
-                    # train cnn
-                    results = train_model(
-                        model=CNNMNIST(),
-                        training_args=training_args,
-                        train_dataset=train_dataset,
-                        dev_dataset=val_dataset,
-                        test_dataset=test_dataset,
-                        seed=SEED,
-                    )
-                    # print the results
-                    print(results)
+    # create a vae config
+    vae_config = VAEConfig(z_dim=Z_DIM, beta=BETA)
+    # start mlflow run in experiment
+    mlflow.set_experiment(f"CNN Z_DIM {Z_DIM}" if AUGMENTATION else "CNN Baseline")
+    with mlflow.start_run(run_name=AUGMENTATION or "baseline"):
+        # perform data augmentation if specified
+        if AUGMENTATION is not None:
+            gen = Generator(
+                vae_config,
+                VAE_EPOCHS,
+                MULTI_VAE,
+                SEED,
+            )
+            train_dataset = gen.augment_dataset(train_dataset, AUGMENTATION, **augmentation_params)
+
+        # train cnn
+        results = train_model(
+            model=CNNMNIST(),
+            training_args=training_args,
+            train_dataset=train_dataset,
+            dev_dataset=val_dataset,
+            test_dataset=test_dataset,
+            seed=SEED,
+        )
+        # print the results
+        print(results)

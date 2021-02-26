@@ -5,25 +5,27 @@ from torchvision import transforms
 from torchvision.datasets import MNIST, CelebA, CIFAR10, Omniglot, KMNIST
 
 
-def _get_mnist(train: bool = False) -> MNIST:
+def _get_mnist(train: bool = False, download: bool = False) -> MNIST:
     return MNIST(
         root="~/torch_datasets",
         transform=transforms.ToTensor(),
         train=train,
+        download=download,
         target_transform=torch.as_tensor,
     )
 
 
-def _get_cifar10(train: bool = False) -> CIFAR10:
+def _get_cifar10(train: bool = False, download: bool = False) -> CIFAR10:
     return CIFAR10(
         root="~/torch_datasets",
         transform=transforms.ToTensor(),
         train=train,
+        download=download,
         target_transform=torch.as_tensor,
     )
 
 
-def _get_celeba(train: bool = False, target_type: str = "identity") -> CelebA:
+def _get_celeba(train: bool = False, target_type: str = "identity", download: bool = False) -> CelebA:
     return CelebA(
         root="~/torch_datasets",
         transform=transforms.Compose(
@@ -34,25 +36,28 @@ def _get_celeba(train: bool = False, target_type: str = "identity") -> CelebA:
             ]
         ),
         split="train" if train else "test",
+        download=download,
         target_type=target_type,
         target_transform=torch.as_tensor,
     )
 
 
-def _get_kmnist(train: bool = False) -> MNIST:
+def _get_kmnist(train: bool = False, download: bool = False) -> MNIST:
     return KMNIST(
         root="~/torch_datasets",
         transform=transforms.ToTensor(),
         train=train,
+        download=download,
         target_transform=torch.as_tensor,
     )
 
 
-def _get_omniglot(train: bool = False) -> Omniglot:
+def _get_omniglot(train: bool = False, download: bool = False) -> Omniglot:
     return Omniglot(
         root="~/torch_datasets",
         transform=transforms.ToTensor(),
         background=True,
+        download=download,
         target_transform=torch.as_tensor,
     )
 
@@ -73,7 +78,7 @@ def get_dataset(name: str, *args: Any, **kwargs: Any) -> Union[MNIST, CelebA]:
 if __name__ == "__main__":
     from torch.utils.data import DataLoader
 
-    dataset = get_dataset("KMNIST", train=True)
+    dataset = get_dataset("MNIST", train=True, download=True)
     dataloader = DataLoader(dataset, batch_size=len(dataset), shuffle=True)
     x, y = next(iter(dataloader))
     print(x.size())

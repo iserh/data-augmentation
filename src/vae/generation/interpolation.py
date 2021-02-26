@@ -8,27 +8,26 @@ from sklearn.neighbors import NearestNeighbors
 from torch import Tensor
 
 
-def apply_interpolation(latents: Tensor, log_vars: Tensor, n_neighbors: int, alpha: float, **kwargs) -> Tuple[Tensor, Tensor]:
+def apply_interpolation(real_images: Tensor, latents: Tensor, log_vars: Tensor, unique_latents: Tensor, unique_reals: Tensor, n_neighbors: int, alpha: float, **kwargs) -> Tuple[Tensor, Tensor]:
     # build nearest neighbour tree, k + 1 because the first neighbour is the point itself
-    nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1, algorithm="ball_tree").fit(latents)
+    nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1, algorithm="ball_tree").fit(unique_latents)
     # get indices of k nearest neighbours for each latent vector
     _, indices = nbrs.kneighbors(latents)
     # the new latents and their root latents
-    new_latents = torch.empty_like(latents)
-    roots = torch.empty_like(latents)
+    new_latents, partners = [], []
     for i, idx in enumerate(indices):
         # choose one of the k nearest neighbors (ignore first one because its the latent vector itself)
-        neighbor = np.random.choice(idx[1:])
+        neighbor_idx = np.random.choice(idx[1:])
         # interpolate
-        new_latents[i] = (neighbor - latents[i]) * alpha + latents[i]
+        new_latents.append((latents[neighbor_idx] - latents[i]) * alpha + latents[i])
         # root is the neighbor
-        roots[i] = neighbor
+        partners.append(unique_reals[neighbor_idx])
 
-    return new_latents, roots
+    return torch.stack(new_latents, dim=0), real_images, torch.stack(partners, dim=0)
 
 
-def apply_extrapolation(latents: Tensor, log_vars: Tensor, n_neighbors: int, alpha: float, **kwargs) -> Tuple[Tensor, Tensor]:
-    return apply_interpolation(latents, log_vars, n_neighbors, -alpha, **kwargs)
+def apply_extrapolation(real_images: Tensor, latents: Tensor, log_vars: Tensor, **kwargs) -> Tuple[Tensor, Tensor]:
+    return apply_interpolation(real_images, latents, log_vars, **kwargs)
 
 
 def interpolate_along_class(latents: Tensor, targets: Tensor, n_steps: int) -> Tensor:

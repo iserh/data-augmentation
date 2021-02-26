@@ -5,12 +5,13 @@ import mlflow
 import torch
 from sklearn.decomposition import PCA
 from torch.utils.data import DataLoader, Dataset, TensorDataset
+from matplotlib.pyplot import close
 
 from utils.trainer import TrainingArguments
 from vae.models import VAEConfig, VAEForDataAugmentation
 from vae.models.base import VAEModel
 from vae.trainer import VAETrainer
-from vae.visualization import visualize_images, visualize_latents, visualize_heritages_partners
+from vae.visualization import visualize_latents, visualize_images
 from numpy import ceil
 
 
@@ -64,28 +65,36 @@ def train_vae_on_classes(
             encoded = vae.encode_dataset(test_dataset)
             fakes = vae.decode_dataset(TensorDataset(encoded.tensors[0], encoded.tensors[1])).tensors[0]
             pca = PCA(2).fit(encoded.tensors[0]) if vae_config.z_dim > 2 else None
-            visualize_latents(
+            fig = visualize_latents(
                 encoded.tensors[0],
                 pca=pca,
                 targets=test_dataset.tensors[1],
                 color_by_target=True,
             )
-            visualize_heritages_partners(
-                fakes,
-                test_dataset.tensors[0],
+            mlflow.log_figure(fig, "latents.png")
+            close()
+            fig = visualize_images(
+                images=fakes,
                 n=50,
+                heritages=test_dataset.tensors[0],
                 cols=5,
                 filename="Real-Fake",
                 img_title="Fakes",
                 heritage_title="Original",
             )
+            mlflow.log_figure(fig, "Real-Fake.png")
+            close()
 
             # random images
             z = torch.normal(0, 1, size=(200, vae_config.z_dim))
             labels = torch.ones((200,)) * label
             fakes = vae.decode_dataset(TensorDataset(z, labels)).tensors[0]
-            visualize_latents(z, pca=pca, img_name="random_latents")
-            visualize_images(fakes, 50, "random_fakes", cols=8)
+            fig = visualize_latents(z, pca=pca)
+            mlflow.log_figure(fig, "random_latents.png")
+            close()
+            fig = visualize_images(fakes, 50, cols=5)
+            mlflow.log_figure(fig, "random_fakes.png")
+            close()
 
 
 def train_vae_on_dataset(
@@ -125,28 +134,35 @@ def train_vae_on_dataset(
         encoded = vae.encode_dataset(test_dataset)
         reals, labels = next(iter(DataLoader(test_dataset, batch_size=len(test_dataset), num_workers=4)))
         fakes = vae.decode_dataset(TensorDataset(encoded.tensors[0], encoded.tensors[1])).tensors[0]
-        visualize_latents(
+        fig = visualize_latents(
             encoded.tensors[0],
             pca=PCA(2).fit(encoded.tensors[0]),
             targets=labels,
             color_by_target=True,
         )
-        visualize_heritages_partners(
+        mlflow.log_figure(fig, "latents.png")
+        close()
+        fig = visualize_images(
             images=fakes,
-            heritages=reals,
             n=50,
+            heritages=reals,
             cols=5,
-            filename="Real-Fake",
             img_title="Fakes",
             heritage_title="Original",
         )
+        mlflow.log_figure(fig, "Real-Fake.png")
+        close()
 
         # random images
         z = torch.normal(0, 1, size=(200, vae_config.z_dim))
         labels = torch.ones((200,))  # arbitrary labels
         fakes = vae.decode_dataset(TensorDataset(z, labels)).tensors[0]
-        visualize_latents(z, pca=PCA(2).fit(encoded.tensors[0]), img_name="random_latents")
-        visualize_images(fakes, 50, "random_fakes", cols=8)
+        fig = visualize_latents(z, pca=PCA(2).fit(encoded.tensors[0]))
+        mlflow.log_figure(fig, "random_latents.png")
+        close()
+        fig = visualize_images(fakes, 50, cols=5)
+        mlflow.log_figure(fig, "random_fakes.png")
+        close()
 
 
 if __name__ == "__main__":
