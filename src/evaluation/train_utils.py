@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     MULTI_VAE = False
     VAE_EPOCHS = 50
-    Z_DIM = 10
+    Z_DIM = 2
     BETA = 1.0
     AUGMENTATION = augmentations.DISTRIBUTION
     augmentation_params = {"K": 450}
