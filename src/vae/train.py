@@ -166,17 +166,21 @@ def train_vae_on_dataset(
 
 
 if __name__ == "__main__":
+    import torch
+    import mlflow
+    import vae
     from utils.mlflow import backend_stores
     from utils.trainer import TrainingArguments
     from vae.models import VAEConfig
     from vae.models.architectures import VAEModelV1
+    from vae import train_vae_on_dataset
 
     from utils.data import load_datasets
+    vae.models.base.model_store = "pretrained_models/MNIST"
 
     # *** Seeding, loading data & setting up mlflow logging ***
 
     DATASET = "MNIST"
-    DATASET_LIMIT = 50
     SEED = 1337
 
     # set the backend store uri of mlflow
@@ -185,24 +189,29 @@ if __name__ == "__main__":
     torch.manual_seed(SEED)
     # load datasets
     train_dataset, vae_train_dataset, val_dataset, test_dataset = load_datasets(DATASET)
+    print(len(train_dataset), len(vae_train_dataset), len(test_dataset))
+
+    # *** VAE Parameters ***
+
+    EPOCHS = 50
+    # Z_DIM = 2
+    # BETA = 1.0
 
     # *** Training the VAE ***
 
-    for z_dim in [3]:
-        for beta in [1.0]:
-            for vae_epochs in [200]:
-                # set mlflow experiment
-                mlflow.set_experiment(f"Z_DIM {z_dim}")
-                print(f"Training VAE with {z_dim=}, {beta=}, {vae_epochs=}")
-                # create a vae config
-                vae_config = VAEConfig(z_dim=z_dim, beta=beta)
-                # train vae
-                train_vae_on_classes(
-                    training_args=TrainingArguments(vae_epochs, seed=SEED, batch_size=64),
-                    train_dataset=vae_train_dataset,
-                    test_dataset=val_dataset,
-                    vae_config=vae_config,
-                    model_architecture=VAEModelV1,
-                    save_every_n_epochs=25,
-                    seed=SEED,
-                )
+    for Z_DIM in [2, 3, 4, 8, 10]:
+        for BETA in [1.0, 0.7, 0.5, 0.3, 0.1]:
+            # set mlflow experiment
+            mlflow.set_experiment(f"Z_DIM {Z_DIM}")
+            # create a vae config
+            vae_config = VAEConfig(z_dim=Z_DIM, beta=BETA)
+            # train vae
+            train_vae_on_dataset(
+                training_args=TrainingArguments(EPOCHS, seed=SEED, batch_size=64),
+                train_dataset=vae_train_dataset,
+                test_dataset=val_dataset,
+                vae_config=vae_config,
+                model_architecture=VAEModelV1,
+                save_every_n_epochs=25,
+                seed=SEED,
+            )
