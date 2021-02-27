@@ -136,7 +136,7 @@ def train_vae_on_dataset(
         fakes = vae.decode_dataset(TensorDataset(encoded.tensors[0], encoded.tensors[1])).tensors[0]
         fig = visualize_latents(
             encoded.tensors[0],
-            pca=PCA(2).fit(encoded.tensors[0]),
+            pca=PCA(2).fit(encoded.tensors[0]) if vae_config.z_dim > 2 else None,
             targets=labels,
             color_by_target=True,
         )
