@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 import torch.nn as nn
-from configparser import ConfigParser
+from torch.utils.data import Dataset, DataLoader
 
 
 def init_weights(module: nn.Module) -> None:
@@ -31,7 +31,3 @@ def uri_to_path(uri: str) -> Path:
         Path: The converted path
     """
     return Path(unquote(urlparse(uri).path))
-
-
-def get_model_root() -> Path:
-    ConfigParser()
