@@ -30,11 +30,11 @@ def apply_extrapolation(real_images: Tensor, latents: Tensor, log_vars: Tensor, 
     return apply_interpolation(real_images, latents, log_vars, **kwargs)
 
 
-def interpolate_along_class(latents: Tensor, targets: Tensor, n_steps: int) -> Tensor:
-    unique_targets = torch.unique(targets, sorted=True).tolist()
+def interpolate_along_class(latents: Tensor, labels: Tensor, n_steps: int) -> Tensor:
+    unique_targets = torch.unique(labels, sorted=True).tolist()
     interpolated, corresponding_targets = [], []
     for i in unique_targets:
-        mask = targets == i
+        mask = labels == i
         pca = PCA(1).fit(latents[mask.flatten()])
         pc = pca.transform(latents)
         x = np.expand_dims(np.linspace(pc.min(), pc.max(), n_steps), axis=1)

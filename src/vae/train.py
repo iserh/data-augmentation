@@ -68,8 +68,8 @@ def train_vae_on_classes(
             fig = visualize_latents(
                 encoded.tensors[0],
                 pca=pca,
-                targets=test_dataset.tensors[1],
-                color_by_target=True,
+                labels=test_dataset.tensors[1],
+                color_by_label=True,
             )
             mlflow.log_figure(fig, "latents.png")
             close()
@@ -137,8 +137,8 @@ def train_vae_on_dataset(
         fig = visualize_latents(
             encoded.tensors[0],
             pca=PCA(2).fit(encoded.tensors[0]) if vae_config.z_dim > 2 else None,
-            targets=labels,
-            color_by_target=True,
+            labels=labels,
+            color_by_label=True,
         )
         mlflow.log_figure(fig, "latents.png")
         close()

@@ -14,8 +14,8 @@ from torch import Tensor
 def visualize_latents(
     latents: Tensor,
     pca: Optional[PCA] = None,
-    targets: Optional[Tensor] = None,
-    color_by_target: bool = False,
+    labels: Optional[Tensor] = None,
+    color_by_label: bool = False,
 ) -> Figure:
     if pca is not None:
         latents = pca.transform(latents)
@@ -24,10 +24,10 @@ def visualize_latents(
     fig.patch.set_alpha(0.0)
     ax = fig.add_subplot(xlim=(-4, 4), ylim=(-4, 4))
     # plot latents to figure
-    if color_by_target:
-        targets_unique = torch.unique(targets, sorted=True).int().tolist()
+    if color_by_label:
+        targets_unique = torch.unique(labels, sorted=True).int().tolist()
         for t in targets_unique:
-            mask = targets.flatten() == t
+            mask = labels.flatten() == t
             ax.scatter(*latents[mask].T, label=f"{t}")
     else:
         ax.scatter(*latents.T, label="z")

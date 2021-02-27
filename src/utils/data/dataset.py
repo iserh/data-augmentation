@@ -31,10 +31,10 @@ class ResizeDataset(Dataset):
             assert n % len(class_indices) == 0, "Size of dataset must be a multiple of the unique class count."
             class_indices = [indices[: n // len(class_indices)] for indices in class_indices]
             self.indices = torch.cat(class_indices, dim=0)
-            self.targets = classes[self.indices]
+            self.labels = classes[self.indices]
         else:
             self.indices = torch.randperm(len(dataset))[:n]
-            self.targets = None
+            self.labels = None
 
     def __len__(self) -> int:
         return len(self.indices)

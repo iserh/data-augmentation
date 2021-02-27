@@ -190,14 +190,14 @@ class Generator:
         # pca for 2d view
         pca = PCA(2).fit(latents) if latents.size(1) > 2 else None
         # visualize encoded latents
-        fig = visualize_latents(latents, pca, targets=labels, color_by_target=True)
+        fig = visualize_latents(latents, pca, labels=labels, color_by_label=True)
         if self.mlflow_enabled:
             self.mlflow.log_figure(fig, "original_latents.png")
             close()
         else:
             fig.show()
         # visualize augmented latents
-        fig = visualize_latents(new_latents, pca, targets=new_labels, color_by_target=True)
+        fig = visualize_latents(new_latents, pca, labels=new_labels, color_by_label=True)
         if self.mlflow_enabled:
             self.mlflow.log_figure(fig, "augmented_latents.png")
             close()
