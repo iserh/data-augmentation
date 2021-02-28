@@ -1,13 +1,15 @@
 """Visualization functions."""
 from typing import Optional
 
-from utils import mlflow_available, mlflow_active
 import numpy as np
 import torch
 import torchvision.utils as vutils
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from torch import Tensor
+
+from utils import mlflow_active, mlflow_available
+
 if mlflow_available():
     import mlflow
 
@@ -55,7 +57,7 @@ def visualize_images(
         n_plots = 1 if heritages is None and partners is None else 2
     else:
         n_plots = 3
-    
+
     # Plot the images
     plt.subplot(1, n_plots, 1)
     plt.axis("off")

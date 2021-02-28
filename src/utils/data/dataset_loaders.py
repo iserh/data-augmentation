@@ -2,7 +2,7 @@ from typing import Any, Union
 
 import torch
 from torchvision import transforms
-from torchvision.datasets import MNIST, CelebA, CIFAR10, Omniglot, KMNIST
+from torchvision.datasets import CIFAR10, KMNIST, MNIST, CelebA, Omniglot
 
 
 def _get_mnist(train: bool = False, download: bool = False) -> MNIST:

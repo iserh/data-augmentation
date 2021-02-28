@@ -7,11 +7,12 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
+from utils import mlflow_active, mlflow_available
 from utils.models import BaseModel, ModelOutput
 
 from .early_stopping import EarlyStopping
 from .training_arguments import TrainingArguments
-from utils import mlflow_available, mlflow_active
+
 if mlflow_available:
     import mlflow
 
@@ -103,7 +104,7 @@ class Trainer:
                     ignore_index=True,
                 )
                 # compute step metrics
-                metrics = self.log_step(outputs.iloc[-len(batch):], validate=False)
+                metrics = self.log_step(outputs.iloc[-len(batch) :], validate=False)
                 # log to mlflow
                 if mlflow_available():
                     mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=step)
@@ -116,7 +117,7 @@ class Trainer:
                     val_metrics, early_stop = self.validate(test_loader)
                     if mlflow_available():
                         mlflow.log_metrics({"test_" + k: v for k, v in val_metrics.items()}, step=step)
-                
+
                 # optional save model
                 if self.args.save_model and self.args.save_intervall and step % self.args.save_intervall == 0:
                     self.model.save(epoch)
@@ -143,7 +144,7 @@ class Trainer:
 
                 if early_stop:
                     break
-                
+
         # return step, epoch stopped
         return step, epoch
 
@@ -160,7 +161,7 @@ class Trainer:
                 [outputs, pd.DataFrame(self.test_step(*[x.to(self.device, non_blocking=True) for x in batch]))],
                 ignore_index=True,
             )
-            metrics = self.log_step(outputs.iloc[-len(batch):], validate=not evaluation)
+            metrics = self.log_step(outputs.iloc[-len(batch) :], validate=not evaluation)
             # # progress bar
             # test_pbar.set_postfix({k: f"{v:7.2f}" for k, v in metrics.items()})
             # test_pbar.update(1)
@@ -185,7 +186,9 @@ class Trainer:
         return {"eval_" + k: v for k, v in metrics.items()}
 
     def log_epoch(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
-        metrics = self.epoch_metrics(outputs["prediction"], outputs["label"], validate=validate) if self.epoch_metrics else {}
+        metrics = (
+            self.epoch_metrics(outputs["prediction"], outputs["label"], validate=validate) if self.epoch_metrics else {}
+        )
         # save best model
         if self.args.save_best_metric is not None and metrics.get(self.args.save_best_metric, False):
             self.best_model = self.model.__class__(self.model.config).to(self.model.config.device)
@@ -196,7 +199,9 @@ class Trainer:
         }
 
     def log_step(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
-        metrics = self.step_metrics(outputs["prediction"], outputs["label"], validate=validate) if self.step_metrics else {}
+        metrics = (
+            self.step_metrics(outputs["prediction"], outputs["label"], validate=validate) if self.step_metrics else {}
+        )
         # save best model
         if self.args.save_best_metric is not None and metrics.get(self.args.save_best_metric, False):
             self.best_model = self.model.__class__(self.model.config)

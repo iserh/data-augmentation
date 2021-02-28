@@ -1,2 +1,2 @@
 """Visualizing VAEs."""
-from .vis import visualize_latents, visualize_images  # noqa: F401
+from .vis import visualize_images, visualize_latents  # noqa: F401

@@ -2,29 +2,22 @@
 from typing import Dict, Optional, Type
 
 import pandas as pd
-
-from utils.trainer import Trainer
-from torch import Tensor
 import torch
-
-from vae.models import VAEOutput
-
+from numpy import ceil
 from sklearn.decomposition import PCA
+from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 
-from utils.trainer import TrainingArguments
-from vae.models import VAEConfig, VAEForDataAugmentation
+from utils.trainer import Trainer, TrainingArguments
+from vae.models import VAEConfig, VAEForDataAugmentation, VAEOutput
 from vae.models.base import VAEModel
 from vae.trainer import VAETrainer
-from vae.visualization import visualize_latents, visualize_images
-from numpy import ceil
+from vae.visualization import visualize_images, visualize_latents
 
 
 class VAETrainer(Trainer):
     def log_epoch(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
-        metrics = (
-            self.epoch_metrics(outputs["prediction"], outputs["label"]) if self.epoch_metrics else {}
-        )
+        metrics = self.epoch_metrics(outputs["prediction"], outputs["label"]) if self.epoch_metrics else {}
         bce_losses, kl_losses = [*zip(*[(loss.r_loss, loss.kl_loss) for _, loss in outputs["loss"].iteritems()])]
         return {
             "bce_l": sum(bce_losses) / len(bce_losses),
@@ -33,9 +26,7 @@ class VAETrainer(Trainer):
         }
 
     def log_step(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
-        metrics = (
-            self.step_metrics(outputs["prediction"], outputs["label"]) if self.step_metrics else {}
-        )
+        metrics = self.step_metrics(outputs["prediction"], outputs["label"]) if self.step_metrics else {}
         bce_losses, kl_losses = [*zip(*[(loss.r_loss, loss.kl_loss) for _, loss in outputs["loss"].iteritems()])]
         return {
             "bce_l": sum(bce_losses) / len(bce_losses),
@@ -76,7 +67,9 @@ def train_vae(
         training_args.seed = seed
 
     if save_every_n_epochs is not None:
-        training_args.save_intervall = save_every_n_epochs * ceil(len(train_dataset) / training_args.batch_size).astype(int)
+        training_args.save_intervall = save_every_n_epochs * ceil(len(train_dataset) / training_args.batch_size).astype(
+            int
+        )
 
     # create model
     model = model_architecture(vae_config)
@@ -124,15 +117,15 @@ def train_vae(
 
 
 if __name__ == "__main__":
-    import torch
     import mlflow
+    import torch
+
     import vae
+    from utils.data import get_dataset, load_splitted_datasets, load_unsplitted_dataset
     from utils.mlflow import backend_stores
     from utils.trainer import TrainingArguments
     from vae.models import VAEConfig
     from vae.models.architectures import VAEModelV1 as VAEModelVersion
-    from utils.data import load_splitted_datasets, load_unsplitted_dataset
-    from utils.data import get_dataset
 
     vae.models.base.model_store = "pretrained_models/MNIST"
 
@@ -171,7 +164,7 @@ if __name__ == "__main__":
                     model_architecture=VAEModelVersion,
                     vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA, attr={"label": label}),
                     save_every_n_epochs=25,
-                    seed=SEED,                
+                    seed=SEED,
                 )
     else:
         train_dataset, _ = load_unsplitted_dataset(DATASET)
@@ -183,5 +176,5 @@ if __name__ == "__main__":
                 model_architecture=VAEModelVersion,
                 vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA),
                 save_every_n_epochs=25,
-                seed=SEED,                
+                seed=SEED,
             )

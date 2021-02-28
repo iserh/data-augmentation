@@ -3,19 +3,21 @@ from dataclasses import fields
 from typing import Optional, Tuple, Union
 
 import torch
+from matplotlib.pyplot import close
 from sklearn.decomposition import PCA
-from torch import Tensor, LongTensor
+from torch import LongTensor, Tensor
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, TensorDataset
 
-from utils import mlflow_available, mlflow_active
-from matplotlib.pyplot import close
+from utils import mlflow_active, mlflow_available
 from vae.models import VAEConfig, VAEForDataAugmentation
-from vae.visualization import visualize_latents, visualize_images
+from vae.visualization import visualize_images, visualize_latents
+
 from . import augmentations
-from .reparametrization import apply_reparametrization
-from .interpolation import apply_interpolation, apply_extrapolation
-from .noise import add_noise, normal_noise
 from .distribution import apply_distribution
+from .interpolation import apply_extrapolation, apply_interpolation
+from .noise import add_noise, normal_noise
+from .reparametrization import apply_reparametrization
+
 if mlflow_available():
     import mlflow
 
@@ -63,7 +65,7 @@ class Generator:
             augmented = self._multi_vae(dataset, augmentation, **kwargs)
         else:
             augmented = self._single_vae(dataset, augmentation, **kwargs)
-        
+
         _, class_counts = torch.unique(augmented.tensors[1], sorted=True, return_counts=True)
         print("----------------------------------------")
         print(f"class_counts: {class_counts}, ({class_counts.sum()} total)")
@@ -88,7 +90,7 @@ class Generator:
         # encode dataset
         latents, log_vars, _ = vae.encode_dataset(dataset).tensors
         # augment data - get augmented latents, targets and the indices used for augmentation (for visualization)
-        
+
         new_latents, new_labels, heritages, partners = apply_augmentation(
             real_images,
             labels,
@@ -128,9 +130,7 @@ class Generator:
             # load vae model
             vae = VAEForDataAugmentation.from_pretrained(self.vae_config, epochs=self.vae_epochs)
             # encode dataset
-            z, log_v, _ = vae.encode_dataset(
-                TensorDataset(real_images[mask], labels[mask])
-            ).tensors
+            z, log_v, _ = vae.encode_dataset(TensorDataset(real_images[mask], labels[mask])).tensors
             latents.append(z)
             log_vars.append(log_v)
 
@@ -168,7 +168,7 @@ class Generator:
         )
 
         return decoded
-    
+
     def _visualize(
         self,
         real_images: Tensor,
@@ -254,7 +254,14 @@ def apply_augmentation(
         log_vars_cls = log_vars_cls[idx]
         real_images_cls = real_images_cls[idx]
         # augment latents
-        augmented_cls, heritages_cls, partners_cls = implementations[augmentation](real_images_cls, latents_cls, log_vars_cls, unique_latents=latents[mask], unique_reals=real_images[mask], **kwargs)
+        augmented_cls, heritages_cls, partners_cls = implementations[augmentation](
+            real_images_cls,
+            latents_cls,
+            log_vars_cls,
+            unique_latents=latents[mask],
+            unique_reals=real_images[mask],
+            **kwargs,
+        )
         new_latents.append(augmented_cls)
         partners.append(partners_cls)
         heritages.append(heritages_cls)

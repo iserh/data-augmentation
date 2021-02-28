@@ -1,13 +1,13 @@
 """Variational autoencoder module class."""
 import torch.nn as nn
 
-from utils.models import ModelConfig
 from utils import init_weights
+from utils.models import ModelConfig
+
 from generative_classifier.models import GenerativeClassifierModel
 
 
 class GenerativeClassifierV1(GenerativeClassifierModel):
-
     def __init__(self, config: ModelConfig) -> None:
         super(GenerativeClassifierV1, self).__init__(config)
         nc = 1

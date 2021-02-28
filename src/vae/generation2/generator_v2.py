@@ -5,13 +5,14 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 
-from generative_classifier.models import GenerativeClassifierModel
-from vae.models import VAEForDataAugmentation
 from vae.generation import augmentations
-from vae.generation.reparametrization import apply_reparametrization
-from vae.generation.interpolation import apply_interpolation, apply_extrapolation
-from vae.generation.noise import add_noise, normal_noise
 from vae.generation.distribution import apply_distribution
+from vae.generation.interpolation import apply_extrapolation, apply_interpolation
+from vae.generation.noise import add_noise, normal_noise
+from vae.generation.reparametrization import apply_reparametrization
+from vae.models import VAEForDataAugmentation
+
+from generative_classifier.models import GenerativeClassifierModel
 
 implementations = {
     augmentations.INTERPOLATION: apply_interpolation,

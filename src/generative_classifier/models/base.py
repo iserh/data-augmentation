@@ -1,22 +1,22 @@
 """Variational autoencoder module class."""
 import inspect
-from typing import Optional
-import torch.nn as nn
-from torch import Tensor
+from datetime import datetime
 from pathlib import Path
+from shutil import copyfile
+from typing import Optional
+
+import torch
+import torch.nn as nn
+import yaml
+from torch import Tensor
+from yaml import SafeLoader
 
 from utils.models import BaseModel, ModelConfig, ModelOutput
-import yaml
-from yaml import SafeLoader
-import torch
-from shutil import copyfile
-from datetime import datetime
 
 model_store = "generative_classifiers/Default"
 
 
 class GenerativeClassifierModel(BaseModel):
-
     def __init__(self, config: ModelConfig) -> None:
         super(GenerativeClassifierModel, self).__init__(config)
         self.model: nn.Module = NotImplemented

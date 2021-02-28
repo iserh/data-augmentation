@@ -1,8 +1,8 @@
-from utils.data.split_datasets import load_splitted_datasets
 import vae
-from vae.models import VAEConfig
-from vae.generation2 import DataAugmentation
+from utils.data.split_datasets import load_splitted_datasets
 from vae.generation import augmentations
+from vae.generation2 import DataAugmentation
+from vae.models import VAEConfig
 
 DATASET = "MNIST"
 vae.models.base.model_store = "pretrained_models/MNIST"

@@ -1,11 +1,12 @@
+from pathlib import Path
 from typing import Optional, Tuple
+
 import torch
 from torch._C import dtype
-from torch.utils.data import random_split
+from torch.utils.data import DataLoader, random_split
 from torch.utils.data.dataset import TensorDataset
+
 from utils.data import get_dataset
-from torch.utils.data import DataLoader
-from pathlib import Path
 
 
 def create_all_datasets(dataset_name: str, dataset_limit: int, balance: bool = False, seed: Optional[int] = None):
@@ -19,9 +20,7 @@ def create_all_datasets(dataset_name: str, dataset_limit: int, balance: bool = F
     test_dataset = get_dataset(dataset_name, train=False)
     # limit train dataset corresponding to DATASET_LIMIT and add 5000 for dev dataset
     vae_train_size = round(0.85 * len(train_dataset))
-    vae_train_dataset, val_dataset = random_split(
-        train_dataset, [vae_train_size, len(train_dataset) - vae_train_size]
-    )
+    vae_train_dataset, val_dataset = random_split(train_dataset, [vae_train_size, len(train_dataset) - vae_train_size])
     train_dataset, _ = random_split(train_dataset, [dataset_limit, len(train_dataset) - dataset_limit])
 
     path = Path(f"datasets/{dataset_name}")

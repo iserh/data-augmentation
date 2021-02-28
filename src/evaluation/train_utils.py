@@ -53,7 +53,7 @@ class BestTracker:
     """Metric Tracker, that remembers the best accuracy in validation."""
 
     def __init__(self) -> None:
-        """Initialize BestTracker"""
+        """Initialize BestTracker."""
         self.best_acc = 0
 
     def __call__(self, predictions: Tensor, labels: Tensor, validate: bool) -> Dict[str, float]:
@@ -80,14 +80,16 @@ class BestTracker:
 if __name__ == "__main__":
     import mlflow
     import torch
+
     import vae
+    from utils.data import load_datasets
     from utils.mlflow import backend_stores
     from utils.trainer import TrainingArguments
     from vae.generation import Generator, augmentations
     from vae.models import VAEConfig
+
     from evaluation.models import CNNMNIST
     from evaluation.train_utils import train_model
-    from utils.data import load_datasets
 
     vae.models.base.model_store = "pretrained_models/MNIST"
 

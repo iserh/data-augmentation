@@ -3,12 +3,14 @@ from dataclasses import fields
 from typing import Any, Dict, List, Optional
 
 import torch
-from utils import mlflow_available, mlflow_active
 from torch.utils.data import Dataset
 from torch.utils.data.dataset import ConcatDataset
+
+from utils import mlflow_active, mlflow_available
+from vae.models import VAEConfig, VAEForDataAugmentation
+
 from .generator_v2 import GeneratorV2
 
-from vae.models import VAEConfig, VAEForDataAugmentation
 if mlflow_available():
     import mlflow
 
@@ -26,7 +28,15 @@ class DataAugmentation:
         self.multi_vae = multi_vae
         self.seed = seed
 
-    def augment_datasets(self, datasets: List[Dataset], dataset_info: Dict[str, Any], augmentation: str, K: int, balancing: bool, **kwargs) -> List[Dataset]:
+    def augment_datasets(
+        self,
+        datasets: List[Dataset],
+        dataset_info: Dict[str, Any],
+        augmentation: str,
+        K: int,
+        balancing: bool,
+        **kwargs,
+    ) -> List[Dataset]:
         if mlflow_active:
             # log vae config except the model attributes
             mlflow.log_params(
@@ -40,12 +50,12 @@ class DataAugmentation:
         # seeding
         if self.seed is not None:
             torch.manual_seed(self.seed)
-        
-        # load generative classifier        
+
+        # load generative classifier
         # load vae now if not using multi vae
         if not self.multi_vae:
             vae = VAEForDataAugmentation.from_pretrained(self.vae_config, epochs=self.vae_epochs)
-        
+
         n = dataset_info["n_classes"]
         total_count = sum(dataset_info["class_counts"])
         # x is the proportion of class i in the dataset
@@ -63,7 +73,7 @@ class DataAugmentation:
                 vae_config_label_i = VAEConfig(**self.vae_config.__dict__)
                 vae_config_label_i.attr["label"] = label
                 vae = VAEForDataAugmentation.from_pretrained(vae_config_label_i, self.vae_epochs)
-            
+
             gen = GeneratorV2(
                 generative_model=vae,
                 dataset=dataset,

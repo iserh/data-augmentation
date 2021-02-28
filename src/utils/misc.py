@@ -1,11 +1,10 @@
 """Miscellaneous utilities."""
+import importlib
 from pathlib import Path
 from typing import Callable, Tuple
 from urllib.parse import unquote, urlparse
 
 import torch.nn as nn
-import importlib
-
 
 mlflow_spec = importlib.util.find_spec("mlflow")
 if mlflow_spec is not None:

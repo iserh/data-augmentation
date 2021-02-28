@@ -1,11 +1,13 @@
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
 import torch
+import yaml
+from torch.utils.data import DataLoader, Subset
 from torch.utils.data.dataset import TensorDataset
 from yaml.loader import SafeLoader
+
 from utils.data import get_dataset
-from torch.utils.data import DataLoader, Subset
-from pathlib import Path
-import yaml
 
 data_path = "datasets/splitted"
 
@@ -38,7 +40,7 @@ def split_datasets(dataset_name: str, reduce: Optional[int] = None, seed: Option
             },
             yml_file,
         )
-    
+
     # save the train dataset unsplitted
     torch.save(dataset, path / "train.pt")
 

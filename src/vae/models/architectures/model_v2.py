@@ -9,7 +9,6 @@ from vae.models.base import Decoder, Encoder, VAEConfig, VAEModel
 
 
 class _Encoder(Encoder):
-
     def __init__(self, z_dim: int, nc: int) -> None:
         super(_Encoder, self).__init__()
         self.conv_stage = nn.Sequential(
@@ -48,7 +47,6 @@ class _Encoder(Encoder):
 
 
 class _Decoder(Decoder):
-
     def __init__(self, z_dim: int, nc: int) -> None:
         super(_Decoder, self).__init__()
         self.linear_stage = nn.Sequential(
@@ -85,7 +83,6 @@ class _Decoder(Decoder):
 
 
 class VAEModelV2(VAEModel):
-
     def __init__(self, config: VAEConfig) -> None:
         super().__init__(config)
         self.encoder = _Encoder(config.z_dim, nc=3)

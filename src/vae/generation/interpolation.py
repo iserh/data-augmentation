@@ -8,7 +8,16 @@ from sklearn.neighbors import NearestNeighbors
 from torch import Tensor
 
 
-def apply_interpolation(real_images: Tensor, latents: Tensor, log_vars: Tensor, unique_latents: Tensor, unique_reals: Tensor, n_neighbors: int, alpha: float, **kwargs) -> Tuple[Tensor, Tensor]:
+def apply_interpolation(
+    real_images: Tensor,
+    latents: Tensor,
+    log_vars: Tensor,
+    unique_latents: Tensor,
+    unique_reals: Tensor,
+    n_neighbors: int,
+    alpha: float,
+    **kwargs
+) -> Tuple[Tensor, Tensor]:
     # build nearest neighbour tree, k + 1 because the first neighbour is the point itself
     nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1, algorithm="ball_tree").fit(unique_latents)
     # get indices of k nearest neighbours for each latent vector
