@@ -1,7 +1,6 @@
 """Trainer for VAEs."""
 from typing import Callable, Dict, Optional, Tuple
 
-import mlflow
 import pandas as pd
 import torch
 from torch import Tensor
@@ -12,6 +11,9 @@ from utils.models import BaseModel, ModelOutput
 
 from .early_stopping import EarlyStopping
 from .training_arguments import TrainingArguments
+from utils import mlflow_available, mlflow_active
+if mlflow_available:
+    import mlflow
 
 
 class Trainer:
@@ -67,10 +69,11 @@ class Trainer:
         self.validation_intervall = self.args.validation_intervall or len(train_loader)
 
         # log config
-        mlflow.log_params(self.args.__dict__)
-        mlflow.log_params(self.model.config.__dict__)
-        mlflow.log_param("train_dataset_size", len(self.train_dataset))
-        mlflow.log_param("dev_dataset_size", len(self.dev_dataset))
+        if mlflow_available():
+            mlflow.log_params(self.args.__dict__)
+            mlflow.log_params(self.model.config.__dict__)
+            mlflow.log_param("train_dataset_size", len(self.train_dataset))
+            mlflow.log_param("dev_dataset_size", len(self.dev_dataset))
 
         step_stopped, epoch_stopped = self.train_loop(train_loader, test_loader)
 
@@ -102,7 +105,8 @@ class Trainer:
                 # compute step metrics
                 metrics = self.log_step(outputs.iloc[-len(batch):], validate=False)
                 # log to mlflow
-                mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=step)
+                if mlflow_available():
+                    mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=step)
                 # progress bar
                 pbar.set_postfix({k: f"{v:7.2f}" for k, v in metrics.items()})
                 pbar.update(1)
@@ -110,7 +114,8 @@ class Trainer:
                 # validation on val dataset
                 if step % self.validation_intervall == 0:
                     val_metrics, early_stop = self.validate(test_loader)
-                    mlflow.log_metrics({"test_" + k: v for k, v in val_metrics.items()}, step=step)
+                    if mlflow_available():
+                        mlflow.log_metrics({"test_" + k: v for k, v in val_metrics.items()}, step=step)
                 
                 # optional save model
                 if self.args.save_model and self.args.save_intervall and step % self.args.save_intervall == 0:
@@ -127,7 +132,8 @@ class Trainer:
                     # compute epoch metrics
                     metrics = self.log_epoch(outputs, validate=False)
                     # log epoch metrics
-                    mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=epoch)
+                    if mlflow_available():
+                        mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=epoch)
                     # reset outputs
                     outputs = pd.DataFrame()
                     # update epoch counter and tqdm description
@@ -174,7 +180,8 @@ class Trainer:
         metrics, _ = self.validate(test_loader)
         self.model = model
         # log to mlflow
-        mlflow.log_metrics({"eval_" + k: v for k, v in metrics.items()})
+        if mlflow_available():
+            mlflow.log_metrics({"eval_" + k: v for k, v in metrics.items()})
         return {"eval_" + k: v for k, v in metrics.items()}
 
     def log_epoch(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:

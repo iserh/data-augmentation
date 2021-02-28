@@ -1,14 +1,15 @@
 """Visualization functions."""
 from typing import Optional
 
-import mlflow
+from utils import mlflow_available, mlflow_active
 import numpy as np
 import torch
 import torchvision.utils as vutils
 from matplotlib import pyplot as plt
-from matplotlib.figure import Figure
 from sklearn.decomposition import PCA
 from torch import Tensor
+if mlflow_available():
+    import mlflow
 
 
 def visualize_latents(
@@ -16,7 +17,8 @@ def visualize_latents(
     pca: Optional[PCA] = None,
     labels: Optional[Tensor] = None,
     color_by_label: bool = False,
-) -> Figure:
+    **kwargs,
+) -> None:
     if pca is not None:
         latents = pca.transform(latents)
     # create pyplot figure and axes
@@ -32,7 +34,11 @@ def visualize_latents(
     else:
         ax.scatter(*latents.T, label="z")
     plt.legend()
-    return fig
+    if mlflow_active():
+        mlflow.log_figure(fig, kwargs.get("filename", "latents.png"))
+    else:
+        plt.show(fig)
+        plt.close(fig)
 
 
 def visualize_images(
@@ -42,7 +48,7 @@ def visualize_images(
     partners: Optional[Tensor] = None,
     cols: int = 10,
     **kwargs,
-) -> Figure:
+) -> None:
     fig = plt.figure(figsize=(15, 15))
     fig.patch.set_alpha(0.0)
     if heritages is None or partners is None:
@@ -85,4 +91,8 @@ def visualize_images(
             )
         )
 
-    return fig
+    if mlflow_active():
+        mlflow.log_figure(fig, kwargs.get("filename", "images.png"))
+    else:
+        plt.show(fig)
+        plt.close(fig)

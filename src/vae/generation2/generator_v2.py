@@ -37,13 +37,6 @@ class GeneratorV2:
         self.dataset = dataset
         self.seed = seed
 
-        # enable mlflow
-        self.mlflow_enabled = not no_mlflow
-        if self.mlflow_enabled:
-            import mlflow
-
-            self.mlflow = mlflow
-
     def generate(self, augmentation: str, n: int, **kwargs) -> Tuple[TensorDataset, Tensor, Tensor]:
         # seeding
         if self.seed is not None:

@@ -17,3 +17,4 @@ class TrainingArguments:
     early_stopping_window: int = 10
     validation_intervall: Optional[int] = None
     save_best_metric: Optional[str] = None
+    no_mlflow: bool = False

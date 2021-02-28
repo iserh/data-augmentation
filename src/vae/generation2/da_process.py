@@ -3,11 +3,14 @@ from dataclasses import fields
 from typing import Any, Dict, List, Optional
 
 import torch
+from utils import mlflow_available, mlflow_active
 from torch.utils.data import Dataset
 from torch.utils.data.dataset import ConcatDataset
 from .generator_v2 import GeneratorV2
 
 from vae.models import VAEConfig, VAEForDataAugmentation
+if mlflow_available():
+    import mlflow
 
 
 class DataAugmentation:
@@ -17,30 +20,22 @@ class DataAugmentation:
         vae_epochs: int,
         multi_vae: bool = False,
         seed: Optional[int] = None,
-        no_mlflow: bool = False,
     ) -> None:
         self.vae_config = vae_config
         self.vae_epochs = vae_epochs
         self.multi_vae = multi_vae
         self.seed = seed
 
-        # enable mlflow
-        self.mlflow_enabled = not no_mlflow
-        if self.mlflow_enabled:
-            import mlflow
-
-            self.mlflow = mlflow
-
     def augment_datasets(self, datasets: List[Dataset], dataset_info: Dict[str, Any], augmentation: str, K: int, balancing: bool, **kwargs) -> List[Dataset]:
-        if self.mlflow_enabled:
+        if mlflow_active:
             # log vae config except the model attributes
-            self.mlflow.log_params(
+            mlflow.log_params(
                 {"vae_" + f.name: getattr(self.vae_config, f.name) for f in fields(self.vae_config) if f.name != "attr"}
             )
-            self.mlflow.log_param("vae_epochs", self.vae_epochs)
-            self.mlflow.log_param("multi_vae", self.multi_vae)
+            mlflow.log_param("vae_epochs", self.vae_epochs)
+            mlflow.log_param("multi_vae", self.multi_vae)
             # log augmentation parameters
-            self.mlflow.log_params(kwargs)
+            mlflow.log_params(kwargs)
 
         # seeding
         if self.seed is not None:

@@ -7,6 +7,7 @@ from sklearn.decomposition import PCA
 from torch import Tensor, LongTensor
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, TensorDataset
 
+from utils import mlflow_available, mlflow_active
 from matplotlib.pyplot import close
 from vae.models import VAEConfig, VAEForDataAugmentation
 from vae.visualization import visualize_latents, visualize_images
@@ -15,6 +16,8 @@ from .reparametrization import apply_reparametrization
 from .interpolation import apply_interpolation, apply_extrapolation
 from .noise import add_noise, normal_noise
 from .distribution import apply_distribution
+if mlflow_available():
+    import mlflow
 
 implementations = {
     augmentations.INTERPOLATION: apply_interpolation,
@@ -33,31 +36,23 @@ class Generator:
         vae_epochs: int,
         multi_vae: bool = False,
         seed: Optional[int] = None,
-        no_mlflow: bool = False,
     ) -> None:
         self.vae_config = vae_config
         self.vae_epochs = vae_epochs
         self.multi_vae = multi_vae
         self.seed = seed
 
-        # enable mlflow
-        self.mlflow_enabled = not no_mlflow
-        if self.mlflow_enabled:
-            import mlflow
-
-            self.mlflow = mlflow
-
     def augment_dataset(self, dataset: Dataset, augmentation: str, **kwargs) -> ConcatDataset:
-        if self.mlflow_enabled:
-            self.mlflow.log_param("original_dataset_size", len(dataset))
+        if mlflow_available():
+            mlflow.log_param("original_dataset_size", len(dataset))
             # log vae config except the model attributes
-            self.mlflow.log_params(
+            mlflow.log_params(
                 {"vae_" + f.name: getattr(self.vae_config, f.name) for f in fields(self.vae_config) if f.name != "attr"}
             )
-            self.mlflow.log_param("vae_epochs", self.vae_epochs)
-            self.mlflow.log_param("multi_vae", self.multi_vae)
+            mlflow.log_param("vae_epochs", self.vae_epochs)
+            mlflow.log_param("multi_vae", self.multi_vae)
             # log augmentation parameters
-            self.mlflow.log_params(kwargs)
+            mlflow.log_params(kwargs)
 
         # seeding
         if self.seed is not None:
@@ -190,19 +185,9 @@ class Generator:
         # pca for 2d view
         pca = PCA(2).fit(latents) if latents.size(1) > 2 else None
         # visualize encoded latents
-        fig = visualize_latents(latents, pca, labels=labels, color_by_label=True)
-        if self.mlflow_enabled:
-            self.mlflow.log_figure(fig, "original_latents.png")
-            close()
-        else:
-            fig.show()
+        visualize_latents(latents, pca, labels=labels, color_by_label=True, filename="original_latents.png")
         # visualize augmented latents
-        fig = visualize_latents(new_latents, pca, labels=new_labels, color_by_label=True)
-        if self.mlflow_enabled:
-            self.mlflow.log_figure(fig, "augmented_latents.png")
-            close()
-        else:
-            fig.show()
+        visualize_latents(new_latents, pca, labels=new_labels, color_by_label=True, filename="augmented_latents.png")
         # plot images of each class
         for cls in torch.unique(new_labels, sorted=True).tolist():
             mask = new_labels == cls
@@ -212,12 +197,8 @@ class Generator:
                 n=n_img_plots,
                 cols=n_img_plots // 10,
                 img_title=f"Original class {cls}",
+                filename=f"Original_Images_class-{cls}.png",
             )
-            if self.mlflow_enabled:
-                self.mlflow.log_figure(fig, f"Original_Images_class-{cls}.png")
-                close()
-            else:
-                fig.show()
             # visualize the fake images, compared to their originals used for generating them
             fig = visualize_images(
                 images=new_decoded[mask],
@@ -226,12 +207,8 @@ class Generator:
                 partners=partners[mask] if partners is not None else None,
                 cols=n_img_plots // 10,
                 img_title=f"Generated class {cls}",
+                filename=f"Heritages_Partners_class-{cls}.png",
             )
-            if self.mlflow_enabled:
-                self.mlflow.log_figure(fig, f"Heritages_Partners_class-{cls}.png")
-                close()
-            else:
-                fig.show()
 
 
 def apply_augmentation(
