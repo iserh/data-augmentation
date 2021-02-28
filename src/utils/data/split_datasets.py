@@ -12,17 +12,23 @@ from utils.data import get_dataset
 data_path = "datasets/splitted"
 
 
-def split_datasets(dataset_name: str, reduce: Optional[int] = None, add_others: bool = True, seed: Optional[int] = None) -> None:
+def split_datasets(dataset_name: str, reduce: Optional[int] = None, add_others: bool = True, balancing: bool = True, seed: Optional[int] = None) -> None:
     # seed
     if seed is not None:
         torch.manual_seed(seed)
     # load dataset
     dataset = get_dataset(dataset_name, train=True)
     # optionally reduce size of the dataset
-    if reduce is not None:
+    if reduce is not None and not balancing:
         dataset = Subset(dataset, torch.randperm(len(dataset))[:reduce])
     # extract data from the dataset
     inputs, labels = next(iter(DataLoader(dataset, batch_size=len(dataset))))
+
+    if reduce is not None and balancing:
+        unique_labels = torch.unique(labels, sorted=True)
+        inputs = torch.cat([inputs[labels == label][:reduce // len(unique_labels)] for label in unique_labels])
+        labels = torch.cat([labels[labels == label][:reduce // len(unique_labels)] for label in unique_labels])
+
     # get classes and class counts
     classes, class_counts = torch.unique(labels, sorted=True, return_counts=True)
 
@@ -89,6 +95,6 @@ def load_unsplitted_dataset(dataset_name: str) -> Tuple[TensorDataset, Dict[str,
 
 if __name__ == "__main__":
     DATASET = "MNIST"
-    split_datasets(DATASET, reduce=200, add_others=False, seed=1337)
+    split_datasets(DATASET, reduce=50, add_others=False, seed=1337)
     datasets, _ = load_splitted_datasets(DATASET)
     print(", ".join([str(len(ds)) for ds in datasets]))
