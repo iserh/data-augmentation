@@ -37,7 +37,7 @@ class GeneratorV2:
         self.dataset = dataset
         self.seed = seed
 
-    def generate(self, augmentation: str, n: int, **kwargs) -> Tuple[TensorDataset, Tensor, Tensor]:
+    def generate(self, augmentation: str, n: int, **kwargs) -> Tuple[TensorDataset, Tensor, Tensor, Tensor, Tensor]:
         # seeding
         if self.seed is not None:
             torch.manual_seed(self.seed)
@@ -61,4 +61,4 @@ class GeneratorV2:
 
         decoded_dataset = self.generative_model.decode_dataset(TensorDataset(generated_latents, sample_labels))
 
-        return decoded_dataset, origins, others
+        return decoded_dataset, latents, labels, generated_latents, origins, others

@@ -3,8 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import yaml
-from torch.utils.data import DataLoader, Subset
-from torch.utils.data.dataset import TensorDataset
+from torch.utils.data import DataLoader, Subset, ConcatDataset, TensorDataset
 from yaml.loader import SafeLoader
 
 from utils.data import get_dataset
@@ -12,7 +11,7 @@ from utils.data import get_dataset
 data_path = "datasets/splitted"
 
 
-def split_datasets(dataset_name: str, reduce: Optional[int] = None, add_others: bool = True, balancing: bool = True, seed: Optional[int] = None) -> None:
+def split_datasets(dataset_name: str, reduce: Optional[int] = None, others: bool = True, balancing: bool = True, seed: Optional[int] = None) -> None:
     # seed
     if seed is not None:
         torch.manual_seed(seed)
@@ -59,7 +58,7 @@ def split_datasets(dataset_name: str, reduce: Optional[int] = None, add_others: 
         inputs_class = inputs[mask_class]
         inputs_other = inputs[mask_other]
 
-        if add_others:
+        if others:
             # select amount of others to reach a 20% part in total
             n_others = len(labels_class) // 4
             others_idx = torch.randperm(len(labels_other))[:n_others]
@@ -71,7 +70,7 @@ def split_datasets(dataset_name: str, reduce: Optional[int] = None, add_others: 
         torch.save(TensorDataset(inputs_class, labels_class), path / "train" / f"class-{label}.pt")
 
 
-def load_splitted_datasets(dataset_name: str) -> Tuple[List[TensorDataset], Dict[str, Any]]:
+def load_splitted_datasets(dataset_name: str, others: bool = True) -> Tuple[List[TensorDataset], Dict[str, Any]]:
     path = Path(data_path) / dataset_name
     if not path.exists():
         raise FileNotFoundError("Dataset does not exist.")
@@ -79,22 +78,23 @@ def load_splitted_datasets(dataset_name: str) -> Tuple[List[TensorDataset], Dict
     with open(path / "info.yml", "r") as yml_file:
         info = yaml.load(yml_file, Loader=SafeLoader)
 
-    return [torch.load(path / "train" / f"class-{label}.pt") for label in info["classes"]], info
+    datasets = [torch.load(path / "train" / f"class-{label}.pt") for label in info["classes"]]
+
+    if not others:
+        datasets = [TensorDataset(*ds[ds.tensors[1] == label]) for label, ds in zip(info["classes"], datasets)]
+
+    return datasets, info
 
 
-def load_unsplitted_dataset(dataset_name: str) -> Tuple[TensorDataset, Dict[str, Any]]:
-    path = Path(data_path) / dataset_name
-    if not path.exists():
-        raise FileNotFoundError("Dataset does not exist.")
-
-    with open(path / "info.yml", "r") as yml_file:
-        info = yaml.load(yml_file, Loader=SafeLoader)
-
-    return torch.load(path / "train.pt"), info
+def load_unsplitted_dataset(dataset_name: str) -> Tuple[ConcatDataset, Dict[str, Any]]:
+    datasets, info = load_splitted_datasets(dataset_name, others=False)
+    return ConcatDataset(datasets), info
 
 
 if __name__ == "__main__":
     DATASET = "MNIST"
-    split_datasets(DATASET, reduce=50, add_others=False, seed=1337)
-    datasets, _ = load_splitted_datasets(DATASET)
+    split_datasets(DATASET, reduce=50, others=True, seed=1337)
+    datasets, _ = load_splitted_datasets(DATASET, others=False)
+    print(", ".join([str(len(ds)) for ds in datasets]))
+    datasets, _ = load_splitted_datasets(DATASET, others=True)
     print(", ".join([str(len(ds)) for ds in datasets]))

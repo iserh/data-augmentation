@@ -40,7 +40,7 @@ def visualize_latents(
         mlflow.log_figure(fig, kwargs.get("filename", "latents.png"))
     else:
         plt.show()
-        plt.close()
+    plt.close()
 
 
 def visualize_images(
@@ -97,4 +97,4 @@ def visualize_images(
         mlflow.log_figure(fig, kwargs.get("filename", "images.png"))
     else:
         plt.show()
-        plt.close()
+    plt.close()
