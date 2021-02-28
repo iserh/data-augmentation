@@ -12,7 +12,7 @@ from utils.data import get_dataset
 data_path = "datasets/splitted"
 
 
-def split_datasets(dataset_name: str, reduce: Optional[int] = None, seed: Optional[int] = None) -> None:
+def split_datasets(dataset_name: str, reduce: Optional[int] = None, add_others: bool = True, seed: Optional[int] = None) -> None:
     # seed
     if seed is not None:
         torch.manual_seed(seed)
@@ -20,7 +20,7 @@ def split_datasets(dataset_name: str, reduce: Optional[int] = None, seed: Option
     dataset = get_dataset(dataset_name, train=True)
     # optionally reduce size of the dataset
     if reduce is not None:
-        dataset = Subset(dataset, torch.randperm(len(dataset))[:500])
+        dataset = Subset(dataset, torch.randperm(len(dataset))[:reduce])
     # extract data from the dataset
     inputs, labels = next(iter(DataLoader(dataset, batch_size=len(dataset))))
     # get classes and class counts
@@ -53,15 +53,16 @@ def split_datasets(dataset_name: str, reduce: Optional[int] = None, seed: Option
         inputs_class = inputs[mask_class]
         inputs_other = inputs[mask_other]
 
-        # select amount of others to reach a 20% part in total
-        n_others = len(labels_class) // 4
-        others_idx = torch.randperm(len(labels_other))[:n_others]
+        if add_others:
+            # select amount of others to reach a 20% part in total
+            n_others = len(labels_class) // 4
+            others_idx = torch.randperm(len(labels_other))[:n_others]
+            # combine all class inputs/labels with the 20% part of other classes
+            inputs_class = torch.cat([inputs_class, inputs_other[others_idx]])
+            labels_class = torch.cat([labels_class, labels_other[others_idx]])
 
-        # combine all class inputs/labels with the 20% part of other classes
-        train_inputs_class = torch.cat([inputs_class, inputs_other[others_idx]])
-        train_labels_class = torch.cat([labels_class, labels_other[others_idx]])
         # save this dataset
-        torch.save(TensorDataset(train_inputs_class, train_labels_class), path / "train" / f"class-{label}.pt")
+        torch.save(TensorDataset(inputs_class, labels_class), path / "train" / f"class-{label}.pt")
 
 
 def load_splitted_datasets(dataset_name: str) -> Tuple[List[TensorDataset], Dict[str, Any]]:
@@ -88,6 +89,6 @@ def load_unsplitted_dataset(dataset_name: str) -> Tuple[TensorDataset, Dict[str,
 
 if __name__ == "__main__":
     DATASET = "MNIST"
-    # split_datasets(DATASET, reduce=200, seed=1337)
+    split_datasets(DATASET, reduce=200, add_others=False, seed=1337)
     datasets, _ = load_splitted_datasets(DATASET)
     print(", ".join([str(len(ds)) for ds in datasets]))

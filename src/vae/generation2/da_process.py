@@ -67,7 +67,7 @@ class DataAugmentation:
         print(f"x = {x}")
         print(f"L = {L}")
 
-        augmented_datasets = []
+        generated_datasets = []
         for label, n_generate, dataset in zip(dataset_info["classes"], L, datasets):
             if self.multi_vae:
                 vae_config_label_i = VAEConfig(**self.vae_config.__dict__)
@@ -81,6 +81,6 @@ class DataAugmentation:
             )
 
             generated_dataset, origins, others = gen.generate(augmentation, n_generate, **kwargs)
-            augmented_datasets.append(ConcatDataset([dataset, generated_dataset]))
+            generated_datasets.append(generated_dataset)
 
-        return augmented_datasets
+        return generated_datasets
