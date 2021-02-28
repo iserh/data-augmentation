@@ -46,9 +46,6 @@ def split_datasets(dataset_name: str, reduce: Optional[int] = None, others: bool
             yml_file,
         )
 
-    # save the train dataset unsplitted
-    torch.save(dataset, path / "train.pt")
-
     # iterate over classes
     for label in classes.tolist():
         mask_class = labels == label
