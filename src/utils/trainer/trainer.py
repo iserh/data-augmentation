@@ -7,7 +7,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from utils import mlflow_active, mlflow_available
+from utils.mlflow import mlflow_active, mlflow_available
 from utils.models import BaseModel, ModelOutput
 
 from .early_stopping import EarlyStopping

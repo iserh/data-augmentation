@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data.dataset import ConcatDataset
 
-from utils import mlflow_active, mlflow_available
+from utils.mlflow import mlflow_active, mlflow_available
 from vae.models import VAEConfig, VAEForDataAugmentation
 
 from .generator_v2 import GeneratorV2
@@ -37,7 +37,7 @@ class DataAugmentation:
         balancing: bool,
         **kwargs,
     ) -> List[Dataset]:
-        if mlflow_active:
+        if mlflow_active():
             # log vae config except the model attributes
             mlflow.log_params(
                 {"vae_" + f.name: getattr(self.vae_config, f.name) for f in fields(self.vae_config) if f.name != "attr"}

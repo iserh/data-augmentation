@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 from torch import LongTensor, Tensor
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, TensorDataset
 
-from utils import mlflow_active, mlflow_available
+from utils.mlflow import mlflow_active, mlflow_available
 from vae.models import VAEConfig, VAEForDataAugmentation
 from vae.visualization import visualize_images, visualize_latents
 

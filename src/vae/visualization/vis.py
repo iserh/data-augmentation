@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from torch import Tensor
 
-from utils import mlflow_active, mlflow_available
+from utils.mlflow import mlflow_active, mlflow_available
 
 if mlflow_available():
     import mlflow
@@ -39,8 +39,8 @@ def visualize_latents(
     if mlflow_active():
         mlflow.log_figure(fig, kwargs.get("filename", "latents.png"))
     else:
-        plt.show(fig)
-        plt.close(fig)
+        plt.show()
+        plt.close()
 
 
 def visualize_images(
@@ -96,5 +96,5 @@ def visualize_images(
     if mlflow_active():
         mlflow.log_figure(fig, kwargs.get("filename", "images.png"))
     else:
-        plt.show(fig)
-        plt.close(fig)
+        plt.show()
+        plt.close()

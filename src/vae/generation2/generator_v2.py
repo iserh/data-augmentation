@@ -31,7 +31,6 @@ class GeneratorV2:
         dataset: Dataset,
         generative_classifier: Optional[GenerativeClassifierModel] = None,
         seed: Optional[int] = None,
-        no_mlflow: bool = False,
     ) -> None:
         self.generative_model = generative_model
         self.generative_classifier = generative_classifier
@@ -60,4 +59,6 @@ class GeneratorV2:
             sample_inputs, sample_latents, sample_log_vars, unique_latents=latents, unique_reals=inputs, **kwargs
         )
 
-        return TensorDataset(generated_latents, sample_labels), origins, others
+        decoded_dataset = self.generative_model.decode_dataset(TensorDataset(generated_latents, sample_labels))
+
+        return decoded_dataset, origins, others

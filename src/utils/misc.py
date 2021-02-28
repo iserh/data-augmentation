@@ -1,24 +1,8 @@
 """Miscellaneous utilities."""
-import importlib
 from pathlib import Path
-from typing import Callable, Tuple
 from urllib.parse import unquote, urlparse
 
 import torch.nn as nn
-
-mlflow_spec = importlib.util.find_spec("mlflow")
-if mlflow_spec is not None:
-    import mlflow
-else:
-    mlflow = None
-
-
-def mlflow_available() -> bool:
-    return mlflow is not None
-
-
-def mlflow_active() -> bool:
-    return mlflow is not None and mlflow.active_run() is not None
 
 
 def init_weights(module: nn.Module) -> None:

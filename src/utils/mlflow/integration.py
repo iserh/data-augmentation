@@ -1,6 +1,7 @@
 """Mlflow integration."""
 import os
 from collections import namedtuple
+import importlib
 
 backend_stores = namedtuple("BackendStores", ["Default", "MNIST", "CIFAR10", "Omniglot", "KMNIST"])(
     Default="experiments/Default",
@@ -9,6 +10,21 @@ backend_stores = namedtuple("BackendStores", ["Default", "MNIST", "CIFAR10", "Om
     Omniglot="experiments/Omniglot",
     KMNIST="experiments/KMNIST",
 )
+
+mlflow_spec = importlib.util.find_spec("mlflow")
+if mlflow_spec is not None:
+    import mlflow
+    mlflow.set_tracking_uri(backend_stores.Default)
+else:
+    mlflow = None
+
+
+def mlflow_available() -> bool:
+    return mlflow is not None
+
+
+def mlflow_active() -> bool:
+    return (mlflow is not None) and (mlflow.active_run() is not None)
 
 
 def run_garbage_collection(*paths: str) -> None:
