@@ -34,7 +34,7 @@ class DataAugmentation:
         dataset_info: Dict[str, Any],
         augmentation: str,
         K: int,
-        balancing: bool,
+        balancing: bool = False,
         **kwargs,
     ) -> List[Dataset]:
         if mlflow_active():
