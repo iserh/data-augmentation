@@ -17,7 +17,7 @@ def split_datasets(dataset_name: str, reduce: Optional[int] = None, seed: Option
     if seed is not None:
         torch.manual_seed(seed)
     # load dataset
-    dataset = get_dataset(DATASET, train=True)
+    dataset = get_dataset(dataset_name, train=True)
     # optionally reduce size of the dataset
     if reduce is not None:
         dataset = Subset(dataset, torch.randperm(len(dataset))[:500])

@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset
 from utils.trainer import Trainer, TrainingArguments
 from vae.models import VAEConfig, VAEForDataAugmentation, VAEOutput
 from vae.models.base import VAEModel
-from vae.trainer import VAETrainer
 from vae.visualization import visualize_images, visualize_latents
 
 
@@ -144,7 +143,7 @@ if __name__ == "__main__":
     # *** VAE Parameters ***
 
     MULTI_VAE = False
-    VAE_EPOCHS = 50
+    VAE_EPOCHS = 2
     Z_DIM = 2
     BETA = 1.0
 
