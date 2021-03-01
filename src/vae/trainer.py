@@ -88,12 +88,13 @@ def train_vae(
     # visualization
     vae = VAEForDataAugmentation.from_pretrained(vae_config, epochs=training_args.epochs)
 
-    encoded = vae.encode_dataset(test_dataset)
-    reals, labels = next(iter(DataLoader(test_dataset, batch_size=len(test_dataset), num_workers=4)))
+    encoded = vae.encode_dataset(train_dataset)
+    pca = PCA(2).fit(encoded.tensors[0]) if encoded.tensors[0].size(1) > 2 else None
+    reals, labels = next(iter(DataLoader(train_dataset, batch_size=len(train_dataset), num_workers=4)))
     fakes = vae.decode_dataset(TensorDataset(encoded.tensors[0], encoded.tensors[1])).tensors[0]
     visualize_latents(
         encoded.tensors[0],
-        pca=PCA(2).fit(encoded.tensors[0]) if vae_config.z_dim > 2 else None,
+        pca=pca,
         labels=labels,
         color_by_label=True,
     )
@@ -111,7 +112,7 @@ def train_vae(
     z = torch.normal(0, 1, size=(200, vae_config.z_dim))
     labels = torch.ones((200,))  # arbitrary labels
     fakes = vae.decode_dataset(TensorDataset(z, labels)).tensors[0]
-    visualize_latents(z, pca=PCA(2).fit(encoded.tensors[0]), filename="random_latents.png")
+    visualize_latents(z, pca=pca, filename="random_latents.png")
     visualize_images(fakes, 50, cols=5, filename="random_fakes.png")
 
 
@@ -142,8 +143,8 @@ if __name__ == "__main__":
 
     # *** VAE Parameters ***
 
-    MULTI_VAE = False
-    VAE_EPOCHS = 2
+    MULTI_VAE = True
+    VAE_EPOCHS = 600
     Z_DIM = 2
     BETA = 1.0
 
@@ -162,7 +163,7 @@ if __name__ == "__main__":
                     test_dataset=test_dataset,
                     model_architecture=VAEModelVersion,
                     vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA, attr={"label": label}),
-                    save_every_n_epochs=25,
+                    save_every_n_epochs=50,
                     seed=SEED,
                 )
     else:
@@ -174,6 +175,6 @@ if __name__ == "__main__":
                 test_dataset=test_dataset,
                 model_architecture=VAEModelVersion,
                 vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA),
-                save_every_n_epochs=25,
+                save_every_n_epochs=50,
                 seed=SEED,
             )

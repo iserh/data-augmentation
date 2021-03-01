@@ -3,6 +3,7 @@ from typing import Tuple
 
 import torch.nn as nn
 from torch import Tensor
+from torch.nn.modules.activation import ReLU
 
 from utils import init_weights
 from vae.models.base import Decoder, Encoder, VAEConfig, VAEModel
@@ -28,7 +29,8 @@ class _Encoder(Encoder):
             # state size: (64) x 14 x 14
             nn.Flatten(),
             # state size: 64 * 14 * 14
-            nn.Linear(64 * 14 * 14, 128)
+            nn.Linear(64 * 14 * 14, 128),
+            nn.ReLU(inplace=True),
             # output size: 128
         )
         # Encoder mean
