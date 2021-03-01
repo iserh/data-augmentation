@@ -5,13 +5,13 @@ import torch
 from numpy import ceil
 from sklearn.metrics import accuracy_score
 from torch import Tensor
-from torch.utils.data import DataLoader, Dataset
-from torch.utils.data.dataset import TensorDataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset, ConcatDataset
 
-from utils.data import load_datasets
+from utils.data import load_unsplitted_dataset, BatchDataset
 from utils.mlflow import backend_stores
 from utils.models.model_config import ModelConfig
 from utils.trainer import Trainer, TrainingArguments
+from vae.visualization import visualize_images
 
 import generative_classifier
 from generative_classifier.models.architectures import GenerativeClassifierV1
@@ -29,12 +29,11 @@ def add_noise_to_dataset(dataset: Dataset, std: float = 0.3) -> TensorDataset:
     _min = normal.flatten(-2).min(-1)[0].unsqueeze(-1).unsqueeze(-1)
     _max = normal.flatten(-2).max(-1)[0].unsqueeze(-1).unsqueeze(-1)
     normal = (normal - _min) / (_max - _min)
-    X = torch.cat([X, uniform, normal])
-    Y = torch.cat(
-        [torch.ones(size=(Y.size(0),), dtype=torch.long), *[torch.zeros(size=(Y.size(0) // 2,), dtype=torch.long)] * 2],
-        dim=0,
+    return (
+        TensorDataset(X, torch.ones(size=(Y.size(0),), dtype=torch.long)),
+        TensorDataset(uniform, torch.zeros(size=(Y.size(0) // 2,), dtype=torch.long)),
+        TensorDataset(normal, torch.zeros(size=(Y.size(0) // 2,), dtype=torch.long)),
     )
-    return TensorDataset(X, Y)
 
 
 def metrics(predictions: Tensor, labels: Tensor, validate: bool) -> Dict[str, float]:
@@ -43,10 +42,8 @@ def metrics(predictions: Tensor, labels: Tensor, validate: bool) -> Dict[str, fl
 
 
 DATASET = "MNIST"
-_, train_dataset, val_dataset, _ = load_datasets(DATASET)
-
-train_dataset = add_noise_to_dataset(train_dataset)
-val_dataset = add_noise_to_dataset(val_dataset)
+train_dataset, _ = load_unsplitted_dataset(DATASET)
+train_dataset = ConcatDataset(add_noise_to_dataset(train_dataset))
 
 training_args = TrainingArguments(
     epochs=1, seed=1337, batch_size=512, validation_intervall=ceil(len(train_dataset) / 512), no_cuda=True
@@ -55,14 +52,16 @@ training_args = TrainingArguments(
 trainer = Trainer(
     args=training_args,
     model=GenerativeClassifierV1(ModelConfig()),
-    train_dataset=train_dataset,
-    dev_dataset=val_dataset,
+    train_dataset=BatchDataset(train_dataset, 100 * training_args.batch_size),
     epoch_metrics=metrics,
 )
 
 mlflow.set_tracking_uri(getattr(backend_stores, DATASET))
 # start mlflow run in experiment
-mlflow.set_experiment(f"Generative Classifier")
+mlflow.set_experiment("Generative Classifier")
 
 with mlflow.start_run():
+    mlflow.log_param("dataset_size", len(train_dataset))
+    visualize_images(train_dataset.datasets[1].tensors[0], n=50, filename="uniform.png", img_title="Unform Noise")
+    visualize_images(train_dataset.datasets[2].tensors[0], n=50, filename="gaussian.png", img_title="Gaussian Noise")
     trainer.train()

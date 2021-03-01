@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Optional
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
+from generative_classifier.models.base import GenerativeClassifierModel
+from utils.models.model_config import ModelConfig
 from vae.visualization import visualize_latents, visualize_images
 from sklearn.decomposition import PCA
 
@@ -22,11 +24,15 @@ class DataAugmentation:
         self,
         vae_config: VAEConfig,
         vae_epochs: int,
+        gc_config: Optional[ModelConfig] = None,
+        gc_epochs: Optional[int] = None,
         multi_vae: bool = False,
         seed: Optional[int] = None,
     ) -> None:
         self.vae_config = vae_config
         self.vae_epochs = vae_epochs
+        self.gc_config = gc_config
+        self.gc_epochs = gc_epochs
         self.multi_vae = multi_vae
         self.seed = seed
 
@@ -61,6 +67,10 @@ class DataAugmentation:
         # load vae now if not using multi vae
         if not self.multi_vae:
             vae = VAEForDataAugmentation.from_pretrained(self.vae_config, epochs=self.vae_epochs)
+        if self.gc_config is not None:
+            gc = GenerativeClassifierModel.from_pretrained(self.gc_config, epochs=self.gc_epochs)
+        else:
+            gc = None
 
         n = dataset_info["n_classes"]
         total_count = sum(dataset_info["class_counts"])
@@ -78,24 +88,27 @@ class DataAugmentation:
         for label, n_generate, dataset in zip(dataset_info["classes"], L, datasets):
             if self.multi_vae:
                 vae_config_label_i = VAEConfig(**self.vae_config.__dict__)
-                vae_config_label_i.attr["label"] = label
+                if vae_config_label_i.attr is None:
+                    vae_config_label_i.attr = {"label": label}
+                else:
+                    vae_config_label_i.attr["label"] = label
                 vae = VAEForDataAugmentation.from_pretrained(vae_config_label_i, self.vae_epochs)
 
             gen = GeneratorV2(
                 generative_model=vae,
                 dataset=dataset,
-                seed=self.seed,
+                generative_classifier=gc,
             )
 
-            generated_dataset, latents, labels, generated_latents, origins, others = gen.generate(augmentation, n_generate, **kwargs)
+            generated_dataset, inputs, labels, latents, generated_latents, origins, others = gen.generate(augmentation, n_generate, **kwargs)
             all_latents.append(latents)
             all_generated_latents.append(generated_latents)
             all_labels.append(labels)
             all_generated_labels.append(generated_dataset.tensors[1])
-            self.visualize_class(label, generated_dataset.tensors[0], latents, generated_latents, origins, others)
+            self.visualize_class(label, inputs, generated_dataset.tensors[0], latents, generated_latents, origins, others)
             generated_datasets.append(generated_dataset)
         
-        self.visualize_all(torch.cat(all_latents, dim=0), torch.cat(all_generated_latents, dim=0), torch.cat(all_labels, dim=0),  torch.cat(all_generated_labels, dim=0))
+        self.visualize_all(torch.cat(all_latents, dim=0), torch.cat(all_generated_latents, dim=0), torch.cat(all_labels, dim=0), torch.cat(all_generated_labels, dim=0))
         return generated_datasets
     
     @staticmethod
@@ -105,8 +118,9 @@ class DataAugmentation:
         visualize_latents(generated_latents, pca, generated_labels, color_by_label=True, filename="generated_latents.png")
 
     @staticmethod
-    def visualize_class(label: int, generated_inputs: Tensor, latents: Tensor, generated_latents: Tensor, origins: Tensor, others: Tensor):
+    def visualize_class(label: int, inputs: Tensor, generated_inputs: Tensor, latents: Tensor, generated_latents: Tensor, origins: Tensor, others: Tensor):
         pca = PCA(2).fit(latents) if latents.size(0) > 2 else None
-        visualize_latents(latents, pca, filename=f"original_latents_class_{label}.png")
-        visualize_latents(generated_latents, pca, filename=f"generated_latents_class_{label}.png")
-        visualize_images(generated_inputs, n=50, heritages=origins, partners=others, cols=5, filename=f"generated_images_class_{label}.png")
+        visualize_latents(latents, pca, filename=f"original_latents_class_{label}.png", label=label)
+        visualize_latents(generated_latents, pca, filename=f"generated_latents_class_{label}.png", label=label)
+        visualize_images(inputs, n=50, cols=5, filename=f"images_class_{label}.png", img_title=f"original images class {label}")
+        visualize_images(generated_inputs, n=50, heritages=origins, partners=others, cols=5, filename=f"generated_images_class_{label}.png", img_title=f"generated images class {label}")

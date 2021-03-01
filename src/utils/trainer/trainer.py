@@ -23,7 +23,7 @@ class Trainer:
         args: TrainingArguments,
         model: BaseModel,
         train_dataset: Dataset,
-        dev_dataset: Dataset,
+        dev_dataset: Optional[Dataset] = None,
         test_dataset: Optional[Dataset] = None,
         step_metrics: Optional[Callable] = None,
         epoch_metrics: Optional[Callable] = None,
@@ -53,7 +53,7 @@ class Trainer:
         train_loader = DataLoader(
             self.train_dataset, batch_size=self.args.batch_size, shuffle=True, pin_memory=True, num_workers=4
         )
-        test_loader = DataLoader(self.dev_dataset, batch_size=512, shuffle=False, pin_memory=True, num_workers=4)
+        test_loader = DataLoader(self.dev_dataset, batch_size=512, shuffle=False, pin_memory=True, num_workers=4) if self.dev_dataset is not None else None
 
         # raise error if both 'total steps' and 'epochs' provided in train args
         if self.args.total_steps is not None:
@@ -74,7 +74,8 @@ class Trainer:
             mlflow.log_params(self.args.__dict__)
             mlflow.log_params(self.model.config.__dict__)
             mlflow.log_param("train_dataset_size", len(self.train_dataset))
-            mlflow.log_param("dev_dataset_size", len(self.dev_dataset))
+            if self.dev_dataset is not None:
+                mlflow.log_param("dev_dataset_size", len(self.dev_dataset))
 
         step_stopped, epoch_stopped = self.train_loop(train_loader, test_loader)
 
@@ -113,7 +114,7 @@ class Trainer:
                 pbar.update(1)
 
                 # validation on val dataset
-                if step % self.validation_intervall == 0:
+                if step % self.validation_intervall == 0 and test_loader is not None:
                     val_metrics, early_stop = self.validate(test_loader)
                     if mlflow_available():
                         mlflow.log_metrics({"test_" + k: v for k, v in val_metrics.items()}, step=step)

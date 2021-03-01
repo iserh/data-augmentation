@@ -79,7 +79,6 @@ class BestTracker:
 
 if __name__ == "__main__":
     import mlflow
-    import torch
 
     import vae
     from utils.data import load_datasets
@@ -89,7 +88,6 @@ if __name__ == "__main__":
     from vae.models import VAEConfig
 
     from evaluation.models import CNNMNIST
-    from evaluation.train_utils import train_model
 
     vae.models.base.model_store = "pretrained_models/MNIST"
 

@@ -24,7 +24,7 @@ class GenerativeClassifierModel(BaseModel):
 
     def forward(self, x: Tensor, y: Optional[Tensor] = None) -> ModelOutput:
         pred: Tensor = self.model(x)
-        loss = self.criterion(pred, y.unsqueeze(1).float())
+        loss = self.criterion(pred, y.unsqueeze(1).float()) if y is not None else None
         return ModelOutput(loss=loss, prediction=(pred > 0).long().squeeze())
 
     @staticmethod

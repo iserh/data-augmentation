@@ -34,7 +34,7 @@ def visualize_latents(
             mask = labels.flatten() == t
             ax.scatter(*latents[mask].T, label=f"{t}")
     else:
-        ax.scatter(*latents.T, label="z")
+        ax.scatter(*latents.T, label=kwargs.get("label", "latent"))
     plt.legend()
     if mlflow_active():
         mlflow.log_figure(fig, kwargs.get("filename", "latents.png"))

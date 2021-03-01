@@ -54,7 +54,6 @@ class VAETrainer(Trainer):
 def train_vae(
     training_args: TrainingArguments,
     train_dataset: Dataset,
-    test_dataset: Dataset,
     model_architecture: Type[VAEModel],
     vae_config: VAEConfig,
     save_every_n_epochs: Optional[int] = None,
@@ -78,7 +77,6 @@ def train_vae(
         args=training_args,
         model=model,
         train_dataset=train_dataset,
-        dev_dataset=test_dataset,
     )
 
     # start training
@@ -121,7 +119,7 @@ if __name__ == "__main__":
     import torch
 
     import vae
-    from utils.data import get_dataset, load_splitted_datasets, load_unsplitted_dataset
+    from utils.data import load_splitted_datasets, load_unsplitted_dataset
     from utils.mlflow import backend_stores
     from utils.trainer import TrainingArguments
     from vae.models import VAEConfig
@@ -139,12 +137,10 @@ if __name__ == "__main__":
     mlflow.set_tracking_uri(getattr(backend_stores, DATASET))
     # seed torch
     torch.manual_seed(SEED)
-    # load test dataset
-    test_dataset = get_dataset(DATASET, train=False)
 
     # *** VAE Parameters ***
 
-    MULTI_VAE = True
+    MULTI_VAE = False
     VAE_EPOCHS = 25
     Z_DIM = 3
     BETA = 1.0
@@ -153,19 +149,19 @@ if __name__ == "__main__":
 
     # set mlflow experiment
     mlflow.set_experiment(f"Z_DIM {Z_DIM}")
-    vae.models.base.model_store = f"pretrained_models/MNIST/{'MULTI' if MULTI_VAE else 'SINGLE'}/Z_DIM {Z_DIM}"
+    vae.models.base.model_store = f"pretrained_models/MNIST/NO_OTHER/{'MULTI' if MULTI_VAE else 'SINGLE'}/Z_DIM {Z_DIM}"
 
     if MULTI_VAE:
-        datasets, dataset_info = load_splitted_datasets(DATASET)
-        for label, train_dataset in zip(dataset_info["classes"], datasets):
+        datasets, dataset_info = load_splitted_datasets(DATASET, others=False)
+        for label, train_dataset, class_count in zip(dataset_info["classes"], datasets, dataset_info["class_counts"]):
             with mlflow.start_run():
+                mlflow.log_param("class_count", class_count)
                 train_vae(
                     TrainingArguments(VAE_EPOCHS, batch_size=128),
                     train_dataset=BatchDataset(train_dataset, 100 * 128),
-                    test_dataset=test_dataset,
                     model_architecture=VAEModelVersion,
                     vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA, attr={"label": label}),
-                    save_every_n_epochs=50,
+                    save_every_n_epochs=5,
                     seed=SEED,
                 )
     else:
@@ -174,7 +170,6 @@ if __name__ == "__main__":
             train_vae(
                 TrainingArguments(VAE_EPOCHS, batch_size=128),
                 train_dataset=train_dataset,
-                test_dataset=test_dataset,
                 model_architecture=VAEModelVersion,
                 vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA),
                 save_every_n_epochs=50,
