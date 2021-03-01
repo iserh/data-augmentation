@@ -119,18 +119,18 @@ if __name__ == "__main__":
     import torch
 
     import vae
-    from utils.data import load_splitted_datasets, load_unsplitted_dataset
+    from utils.data import load_splitted_datasets, get_dataset
     from utils.mlflow import backend_stores
     from utils.trainer import TrainingArguments
     from vae.models import VAEConfig
-    from vae.models.architectures import VAEModelV1 as VAEModelVersion
+    from vae.models.architectures import VAEModelV2 as VAEModelVersion
     from utils.data import BatchDataset
 
     vae.models.base.model_store = "pretrained_models/MNIST"
 
     # *** Seeding, loading data & setting up mlflow logging ***
 
-    DATASET = "MNIST"
+    DATASET = "CIFAR10"
     SEED = 1337
 
     # set the backend store uri of mlflow
@@ -140,19 +140,20 @@ if __name__ == "__main__":
 
     # *** VAE Parameters ***
 
-    MULTI_VAE = False
-    VAE_EPOCHS = 25
-    Z_DIM = 3
+    MULTI_VAE = True
+    VAE_EPOCHS = 200
+    Z_DIM = 10
     BETA = 1.0
+    MIX = True
 
     # *** Training the VAE ***
 
     # set mlflow experiment
     mlflow.set_experiment(f"Z_DIM {Z_DIM}")
-    vae.models.base.model_store = f"pretrained_models/MNIST/NO_OTHER/{'MULTI' if MULTI_VAE else 'SINGLE'}/Z_DIM {Z_DIM}"
 
     if MULTI_VAE:
-        datasets, dataset_info = load_splitted_datasets(DATASET, others=False)
+        vae.models.base.model_store = f"pretrained_models/{DATASET}/MULTI/{'MIX' if MIX else '~MIX'}/Z_DIM {Z_DIM}"
+        datasets, dataset_info = load_splitted_datasets(DATASET, others=MIX)
         for label, train_dataset, class_count in zip(dataset_info["classes"], datasets, dataset_info["class_counts"]):
             with mlflow.start_run():
                 mlflow.log_param("class_count", class_count)
@@ -161,11 +162,12 @@ if __name__ == "__main__":
                     train_dataset=BatchDataset(train_dataset, 100 * 128),
                     model_architecture=VAEModelVersion,
                     vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA, attr={"label": label}),
-                    save_every_n_epochs=5,
+                    save_every_n_epochs=50,
                     seed=SEED,
                 )
     else:
-        train_dataset, _ = load_unsplitted_dataset(DATASET)
+        vae.models.base.model_store = f"pretrained_models/MNIST/SINGLE/Z_DIM {Z_DIM}"
+        train_dataset = get_dataset(DATASET, train=True)
         with mlflow.start_run():
             train_vae(
                 TrainingArguments(VAE_EPOCHS, batch_size=128),

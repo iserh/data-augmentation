@@ -30,6 +30,8 @@ class _Encoder(Encoder):
             # # state size. (64*8) x 2 x 2
             nn.Flatten(),
             nn.Linear(64 * 4 * 4 * 4, 128),
+            nn.BatchNorm1d(128),
+            nn.LeakyReLU(0.2, inplace=True),
         )
         # Encoder mean
         self.mean = nn.Linear(128, z_dim)
