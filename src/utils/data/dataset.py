@@ -1,9 +1,22 @@
 from types import FunctionType
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
+
+
+class BatchDataset(Dataset):
+    def __init__(self, dataset: Dataset, batch_size: int) -> None:
+        self.dataset = dataset
+        self.batch_size = batch_size
+
+    def __len__(self) -> int:
+        return max(len(self.dataset), self.batch_size)
+
+    def __getitem__(self, idx: int) -> Any:
+        idx = idx % len(self.dataset)
+        return self.dataset[idx]
 
 
 class LambdaDataset(Dataset):

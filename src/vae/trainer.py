@@ -126,6 +126,7 @@ if __name__ == "__main__":
     from utils.trainer import TrainingArguments
     from vae.models import VAEConfig
     from vae.models.architectures import VAEModelV1 as VAEModelVersion
+    from utils.data import BatchDataset
 
     vae.models.base.model_store = "pretrained_models/MNIST"
 
@@ -144,14 +145,15 @@ if __name__ == "__main__":
     # *** VAE Parameters ***
 
     MULTI_VAE = True
-    VAE_EPOCHS = 600
-    Z_DIM = 2
+    VAE_EPOCHS = 25
+    Z_DIM = 3
     BETA = 1.0
 
     # *** Training the VAE ***
 
     # set mlflow experiment
     mlflow.set_experiment(f"Z_DIM {Z_DIM}")
+    vae.models.base.model_store = f"pretrained_models/MNIST/{'MULTI' if MULTI_VAE else 'SINGLE'}/Z_DIM {Z_DIM}"
 
     if MULTI_VAE:
         datasets, dataset_info = load_splitted_datasets(DATASET)
@@ -159,7 +161,7 @@ if __name__ == "__main__":
             with mlflow.start_run():
                 train_vae(
                     TrainingArguments(VAE_EPOCHS, batch_size=128),
-                    train_dataset=train_dataset,
+                    train_dataset=BatchDataset(train_dataset, 100 * 128),
                     test_dataset=test_dataset,
                     model_architecture=VAEModelVersion,
                     vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA, attr={"label": label}),
