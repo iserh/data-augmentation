@@ -10,7 +10,7 @@ from torch.utils.data import ConcatDataset, DataLoader, Dataset, TensorDataset
 
 from utils.mlflow import mlflow_active, mlflow_available
 from vae.models import VAEConfig, VAEForDataAugmentation
-from vae.visualization import visualize_images, visualize_latents
+from utils.visualization import plot_images, plot_points
 
 from . import augmentations
 from .distribution import apply_distribution
@@ -185,28 +185,28 @@ class Generator:
         # pca for 2d view
         pca = PCA(2).fit(latents) if latents.size(1) > 2 else None
         # visualize encoded latents
-        visualize_latents(latents, pca, labels=labels, color_by_label=True, filename="original_latents.png")
+        plot_points(latents, pca, labels=labels, filename="original_latents.png")
         # visualize augmented latents
-        visualize_latents(new_latents, pca, labels=new_labels, color_by_label=True, filename="augmented_latents.png")
+        plot_points(new_latents, pca, labels=new_labels, filename="augmented_latents.png")
         # plot images of each class
         for cls in torch.unique(new_labels, sorted=True).tolist():
             mask = new_labels == cls
             # visualize the real images
-            fig = visualize_images(
+            fig = plot_images(
                 images=real_images[labels == cls],
                 n=n_img_plots,
                 cols=n_img_plots // 10,
-                img_title=f"Original class {cls}",
+                images_title=f"Original class {cls}",
                 filename=f"Original_Images_class-{cls}.png",
             )
             # visualize the fake images, compared to their originals used for generating them
-            fig = visualize_images(
+            fig = plot_images(
                 images=new_decoded[mask],
                 n=n_img_plots,
-                heritages=heritages[mask] if heritages is not None else None,
-                partners=partners[mask] if partners is not None else None,
+                origins=heritages[mask] if heritages is not None else None,
+                others=partners[mask] if partners is not None else None,
                 cols=n_img_plots // 10,
-                img_title=f"Generated class {cls}",
+                images_title=f"Generated class {cls}",
                 filename=f"Heritages_Partners_class-{cls}.png",
             )
 

@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset
 from utils.trainer import Trainer, TrainingArguments
 from vae.models import VAEConfig, VAEForDataAugmentation, VAEOutput
 from vae.models.base import VAEModel
-from vae.visualization import visualize_images, visualize_latents
+from utils.visualization import plot_images, plot_points
 
 
 class VAETrainer(Trainer):
@@ -90,19 +90,17 @@ def train_vae(
     pca = PCA(2).fit(encoded.tensors[0]) if encoded.tensors[0].size(1) > 2 else None
     reals, labels = next(iter(DataLoader(train_dataset, batch_size=len(train_dataset), num_workers=4)))
     fakes = vae.decode_dataset(TensorDataset(encoded.tensors[0], encoded.tensors[1])).tensors[0]
-    visualize_latents(
+    plot_points(
         encoded.tensors[0],
         pca=pca,
         labels=labels,
-        color_by_label=True,
     )
-    visualize_images(
+    plot_images(
         images=fakes,
         n=50,
-        heritages=reals,
-        cols=5,
-        img_title="Fakes",
-        heritage_title="Original",
+        origins=reals,
+        images_title="Fakes",
+        origins_title="Original",
         filename="Real-Fake.png",
     )
 
@@ -110,8 +108,8 @@ def train_vae(
     z = torch.normal(0, 1, size=(200, vae_config.z_dim))
     labels = torch.ones((200,))  # arbitrary labels
     fakes = vae.decode_dataset(TensorDataset(z, labels)).tensors[0]
-    visualize_latents(z, pca=pca, filename="random_latents.png")
-    visualize_images(fakes, 50, cols=5, filename="random_fakes.png")
+    plot_points(z, pca=pca, filename="random_latents.png")
+    plot_images(fakes, 50, filename="random_fakes.png")
 
 
 if __name__ == "__main__":
@@ -126,11 +124,9 @@ if __name__ == "__main__":
     from vae.models.architectures import VAEModelV2 as VAEModelVersion
     from utils.data import BatchDataset
 
-    vae.models.base.model_store = "pretrained_models/MNIST"
-
     # *** Seeding, loading data & setting up mlflow logging ***
 
-    DATASET = "CIFAR10"
+    DATASET = "CelebA"
     SEED = 1337
 
     # set the backend store uri of mlflow
@@ -140,11 +136,11 @@ if __name__ == "__main__":
 
     # *** VAE Parameters ***
 
-    MULTI_VAE = True
-    VAE_EPOCHS = 200
-    Z_DIM = 10
+    MULTI_VAE = False
+    VAE_EPOCHS = 500
+    Z_DIM = 100
     BETA = 1.0
-    MIX = True
+    MIX = False
 
     # *** Training the VAE ***
 
@@ -174,6 +170,6 @@ if __name__ == "__main__":
                 train_dataset=train_dataset,
                 model_architecture=VAEModelVersion,
                 vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA),
-                save_every_n_epochs=50,
+                save_every_n_epochs=100,
                 seed=SEED,
             )

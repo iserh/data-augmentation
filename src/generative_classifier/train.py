@@ -11,7 +11,7 @@ from utils.data import load_unsplitted_dataset, BatchDataset
 from utils.mlflow import backend_stores
 from utils.models.model_config import ModelConfig
 from utils.trainer import Trainer, TrainingArguments
-from vae.visualization import visualize_images
+from utils.visualization import plot_images
 
 import generative_classifier
 from generative_classifier.models.architectures import GenerativeClassifierV1
@@ -62,6 +62,6 @@ mlflow.set_experiment("Generative Classifier")
 
 with mlflow.start_run():
     mlflow.log_param("dataset_size", len(train_dataset))
-    visualize_images(train_dataset.datasets[1].tensors[0], n=50, filename="uniform.png", img_title="Unform Noise")
-    visualize_images(train_dataset.datasets[2].tensors[0], n=50, filename="gaussian.png", img_title="Gaussian Noise")
+    plot_images(train_dataset.datasets[1].tensors[0], n=50, filename="uniform.png", images_title="Unform Noise")
+    plot_images(train_dataset.datasets[2].tensors[0], n=50, filename="gaussian.png", images_title="Gaussian Noise")
     trainer.train()

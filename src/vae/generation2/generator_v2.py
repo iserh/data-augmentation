@@ -13,7 +13,7 @@ from vae.generation.reparametrization import apply_reparametrization
 from vae.models import VAEForDataAugmentation
 
 from generative_classifier.models import GenerativeClassifierModel
-from vae.visualization.vis import visualize_images
+from utils.visualization.vis import plot_images
 
 implementations = {
     augmentations.INTERPOLATION: apply_interpolation,
@@ -74,7 +74,7 @@ class GeneratorV2:
                 if is_real.all():
                     all_good = True
                 else:
-                    visualize_images(decoded_inputs[~is_real], n=50, filename=f"noise-iteration-{i}.png")
+                    plot_images(decoded_inputs[~is_real], n=50, filename=f"noise-iteration-{i}.png")
                 final_inputs.append(decoded_inputs[is_real])
                 final_labels.append(sample_labels[is_real])
                 final_generated_latents.append(generated_latents[is_real])

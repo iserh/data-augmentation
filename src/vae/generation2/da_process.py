@@ -7,7 +7,7 @@ from torch import Tensor
 from torch.utils.data import Dataset
 from generative_classifier.models.base import GenerativeClassifierModel
 from utils.models.model_config import ModelConfig
-from vae.visualization import visualize_latents, visualize_images
+from utils.visualization import plot_points, plot_images
 from sklearn.decomposition import PCA
 
 from utils.mlflow import mlflow_active, mlflow_available
@@ -114,13 +114,13 @@ class DataAugmentation:
     @staticmethod
     def visualize_all(latents: Tensor, generated_latents: Tensor, labels: Tensor, generated_labels: Tensor):
         pca = PCA(2).fit(latents) if latents.size(0) > 2 else None
-        visualize_latents(latents, pca, labels, color_by_label=True, filename="original_latents.png")
-        visualize_latents(generated_latents, pca, generated_labels, color_by_label=True, filename="generated_latents.png")
+        plot_points(latents, pca, labels, filename="original_latents.png")
+        plot_points(generated_latents, pca, generated_labels, filename="generated_latents.png")
 
     @staticmethod
     def visualize_class(label: int, inputs: Tensor, generated_inputs: Tensor, latents: Tensor, generated_latents: Tensor, origins: Tensor, others: Tensor):
         pca = PCA(2).fit(latents) if latents.size(0) > 2 else None
-        visualize_latents(latents, pca, filename=f"original_latents_class_{label}.png", label=label)
-        visualize_latents(generated_latents, pca, filename=f"generated_latents_class_{label}.png", label=label)
-        visualize_images(inputs, n=50, cols=5, filename=f"images_class_{label}.png", img_title=f"original images class {label}")
-        visualize_images(generated_inputs, n=50, heritages=origins, partners=others, cols=5, filename=f"generated_images_class_{label}.png", img_title=f"generated images class {label}")
+        plot_points(latents, pca, filename=f"original_latents_class_{label}.png", label=label)
+        plot_points(generated_latents, pca, filename=f"generated_latents_class_{label}.png", label=label)
+        plot_images(inputs, n=50, filename=f"images_class_{label}.png", images_title=f"original images class {label}")
+        plot_images(generated_inputs, n=50, origins=origins, others=others, filename=f"generated_images_class_{label}.png", images_title=f"generated images class {label}")
