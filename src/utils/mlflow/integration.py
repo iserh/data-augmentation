@@ -3,12 +3,10 @@ import os
 from collections import namedtuple
 import importlib
 
-backend_stores = namedtuple("BackendStores", ["Default", "MNIST", "CIFAR10", "Omniglot", "KMNIST"])(
+backend_stores = namedtuple("BackendStores", ["Default", "MNIST", "CIFAR10"])(
     Default="experiments/Default",
     MNIST="experiments/MNIST",
     CIFAR10="experiments/CIFAR10",
-    Omniglot="experiments/Omniglot",
-    KMNIST="experiments/KMNIST",
 )
 
 mlflow_spec = importlib.util.find_spec("mlflow")

@@ -9,7 +9,7 @@ from utils.trainer import TrainingArguments
 
 # *** Seeding, loading data & setting up mlflow logging ***
 
-DATASET = "CelebA"
+DATASET = "CIFAR10"
 SEED = 1337
 
 # set the backend store uri of mlflow
@@ -19,11 +19,12 @@ torch.manual_seed(SEED)
 
 # *** VAE Parameters ***
 
-MULTI_VAE = False
-VAE_EPOCHS = 500
+MULTI_VAE = True
+VAE_EPOCHS = 100
 Z_DIM = 100
 BETA = 1.0
 MIX = False
+BATCH_SIZE = 512
 
 # *** Training the VAE ***
 
@@ -37,19 +38,19 @@ if MULTI_VAE:
         with mlflow.start_run():
             mlflow.log_param("class_count", class_count)
             train_vae(
-                TrainingArguments(VAE_EPOCHS, batch_size=128),
-                train_dataset=BatchDataset(train_dataset, 100 * 128),
+                TrainingArguments(VAE_EPOCHS, batch_size=BATCH_SIZE),
+                train_dataset=BatchDataset(train_dataset, 100 * BATCH_SIZE),
                 model_architecture=VAEModelVersion,
                 vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA, attr={"label": label}),
-                save_every_n_epochs=50,
+                save_every_n_epochs=25,
                 seed=SEED,
             )
 else:
-    vae.models.base.model_store = f"pretrained_models/MNIST/SINGLE/Z_DIM {Z_DIM}"
+    vae.models.base.model_store = f"pretrained_models/{DATASET}/SINGLE/Z_DIM {Z_DIM}"
     train_dataset = get_dataset(DATASET, train=True)
     with mlflow.start_run():
         train_vae(
-            TrainingArguments(VAE_EPOCHS, batch_size=128),
+            TrainingArguments(VAE_EPOCHS, batch_size=BATCH_SIZE),
             train_dataset=train_dataset,
             model_architecture=VAEModelVersion,
             vae_config=VAEConfig(z_dim=Z_DIM, beta=BETA),
