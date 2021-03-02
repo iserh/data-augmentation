@@ -1,7 +1,6 @@
 import vae
 from utils.data.split_datasets import load_splitted_datasets
-from vae.generation import augmentations
-from vae.generation2 import DataAugmentation
+from vae.generation import augmentations, DataAugmentation
 from vae.models import VAEConfig
 
 DATASET = "MNIST"

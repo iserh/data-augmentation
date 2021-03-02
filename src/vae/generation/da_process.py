@@ -13,7 +13,7 @@ from sklearn.decomposition import PCA
 from utils.mlflow import mlflow_active, mlflow_available
 from vae.models import VAEConfig, VAEForDataAugmentation
 
-from .generator_v2 import GeneratorV2
+from .generator import Generator
 
 if mlflow_available():
     import mlflow
@@ -94,7 +94,7 @@ class DataAugmentation:
                     vae_config_label_i.attr["label"] = label
                 vae = VAEForDataAugmentation.from_pretrained(vae_config_label_i, self.vae_epochs)
 
-            gen = GeneratorV2(
+            gen = Generator(
                 generative_model=vae,
                 dataset=dataset,
                 generative_classifier=gc,
