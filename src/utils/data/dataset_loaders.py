@@ -1,8 +1,10 @@
 from typing import Any, Union
 
 import torch
+from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.datasets import CIFAR10, KMNIST, MNIST, CelebA, Omniglot
+from .proben1 import proben1_dataset_loaders
 
 
 def _get_mnist(train: bool = False, download: bool = False) -> MNIST:
@@ -68,10 +70,11 @@ _datasets = {
     "CIFAR10": _get_cifar10,
     "Omniglot": _get_omniglot,
     "KMNIST": _get_kmnist,
+    **proben1_dataset_loaders,
 }
 
 
-def get_dataset(name: str, *args: Any, **kwargs: Any) -> Union[MNIST, CelebA]:
+def get_dataset(name: str, *args: Any, **kwargs: Any) -> Dataset:
     return _datasets[name](*args, **kwargs)
 
 

@@ -7,6 +7,7 @@ import torchvision.utils as vutils
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from torch import Tensor
+from torchvision import transforms
 
 from utils.mlflow import mlflow_active, mlflow_available
 
@@ -32,7 +33,7 @@ def plot_points(
             filename (str): Name of the output file
     """
     if pca is not None:
-        latents = pca.transform(points)
+        points = pca.transform(points)
     # create pyplot figure and axes
     fig = plt.figure(figsize=(16, 16))
     fig.patch.set_alpha(0.0)
@@ -42,10 +43,10 @@ def plot_points(
         classes = torch.unique(labels, sorted=True).int().tolist()
         for c in classes:
             mask = labels.flatten() == c
-            ax.scatter(*latents[mask].T, label=f"{c}")
+            ax.scatter(*points[mask].T, label=f"{c}")
         plt.legend()
     else:
-        ax.scatter(*latents.T)
+        ax.scatter(*points.T)
     if mlflow_active():
         mlflow.log_figure(fig, kwargs.get("filename", "latents.png"))
     else:
@@ -59,6 +60,7 @@ def plot_images(
     origins: Optional[Tensor] = None,
     others: Optional[Tensor] = None,
     cols: int = 5,
+    grayscale: bool = False,
     **kwargs,
 ) -> None:
     """Plot images in a grid.
@@ -84,15 +86,19 @@ def plot_images(
     else:
         n_plots = 3
 
+    to_grayscale = transforms.Grayscale(1) if grayscale else lambda x: x
+
     # Plot the images
     plt.subplot(1, n_plots, 1)
     plt.axis("off")
     plt.title(kwargs.get("images_title", "Images"))
     plt.imshow(
         np.transpose(
-            vutils.make_grid(images[:n], padding=5, normalize=True, nrow=cols),
+            to_grayscale(vutils.make_grid(images[:n], padding=5, normalize=True, nrow=cols)),
             (1, 2, 0),
-        )
+        ),
+        interpolation="nearest",
+        cmap=kwargs.get("cmap", None),
     )
 
     # Plot the heritages
@@ -102,9 +108,11 @@ def plot_images(
         plt.title(kwargs.get("origins_title", "Origins"))
         plt.imshow(
             np.transpose(
-                vutils.make_grid(origins[:n], padding=5, normalize=True, nrow=cols),
+                to_grayscale(vutils.make_grid(origins[:n], padding=5, normalize=True, nrow=cols)),
                 (1, 2, 0),
-            )
+            ),
+            interpolation="nearest",
+            cmap=kwargs.get("cmap", None),
         )
 
     # plot the images that were used for generation
@@ -114,9 +122,11 @@ def plot_images(
         plt.title(kwargs.get("others_title", "Others"))
         plt.imshow(
             np.transpose(
-                vutils.make_grid(others[:n], padding=5, normalize=True, nrow=cols),
+                to_grayscale(vutils.make_grid(others[:n], padding=5, normalize=True, nrow=cols)),
                 (1, 2, 0),
-            )
+            ),
+            interpolation="nearest",
+            cmap=kwargs.get("cmap", None),
         )
 
     if mlflow_active():

@@ -89,9 +89,11 @@ def load_unsplitted_dataset(dataset_name: str) -> Tuple[ConcatDataset, Dict[str,
 
 
 if __name__ == "__main__":
-    DATASET = "CIFAR10"
+    DATASET = "thyroid"
     split_datasets(DATASET, reduce=None, others=True, seed=1337)
     datasets, _ = load_splitted_datasets(DATASET, others=False)
     print(", ".join([str(len(ds)) for ds in datasets]))
     datasets, _ = load_splitted_datasets(DATASET, others=True)
     print(", ".join([str(len(ds)) for ds in datasets]))
+    test_ds = get_dataset("thyroid", train=False)
+    print(len(test_ds))

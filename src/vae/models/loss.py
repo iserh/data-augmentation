@@ -4,8 +4,6 @@ from typing import Any, Tuple
 import numpy as np
 import torch.nn as nn
 from torch import Tensor
-from torch.nn import Parameter
-import torch
 
 
 class VAELossOutput:
