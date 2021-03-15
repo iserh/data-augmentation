@@ -3,6 +3,7 @@
 /pretrained_models
 /datasets
 /generative_classifiers
+/img
 
 # dotfiles
 .vscode
