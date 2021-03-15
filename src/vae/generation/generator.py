@@ -5,15 +5,16 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 
+from utils.visualization import plot_images
+from vae.models import VAEForDataAugmentation
+
+from generative_classifier.models import GenerativeClassifierModel
+
 from . import augmentations
 from .distribution import apply_distribution
 from .interpolation import apply_extrapolation, apply_interpolation
 from .noise import add_noise, normal_noise
 from .reparametrization import apply_reparametrization
-from vae.models import VAEForDataAugmentation
-
-from generative_classifier.models import GenerativeClassifierModel
-from utils.visualization import plot_images
 
 implementations = {
     augmentations.INTERPOLATION: apply_interpolation,
@@ -65,7 +66,9 @@ class Generator:
                 sample_inputs, sample_latents, sample_log_vars, unique_latents=latents, unique_reals=inputs, **kwargs
             )
 
-            decoded_inputs = self.generative_model.decode_dataset(TensorDataset(generated_latents, sample_labels)).tensors[0]
+            decoded_inputs = self.generative_model.decode_dataset(
+                TensorDataset(generated_latents, sample_labels)
+            ).tensors[0]
 
             if self.generative_classifier is not None:
                 decoded_loader = DataLoader(TensorDataset(decoded_inputs), batch_size=512)
@@ -88,11 +91,19 @@ class Generator:
                 final_origins.append(origins if origins is not None else None)
                 final_others.append(others if others is not None else None)
                 all_good = True
-        
+
         final_inputs = torch.cat(final_inputs, dim=0)
         final_labels = torch.cat(final_labels, dim=0)
         final_generated_latents = torch.cat(final_generated_latents, dim=0)
         final_origins = torch.cat(final_origins, dim=0) if final_origins[0] is not None else None
         final_others = torch.cat(final_others, dim=0) if final_others[0] is not None else None
 
-        return TensorDataset(final_inputs, final_labels), inputs, labels, latents, final_generated_latents, final_origins, final_others
+        return (
+            TensorDataset(final_inputs, final_labels),
+            inputs,
+            labels,
+            latents,
+            final_generated_latents,
+            final_origins,
+            final_others,
+        )

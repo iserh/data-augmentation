@@ -5,9 +5,9 @@ import torch
 from numpy import ceil
 from sklearn.metrics import accuracy_score
 from torch import Tensor
-from torch.utils.data import DataLoader, Dataset, TensorDataset, ConcatDataset
+from torch.utils.data import ConcatDataset, DataLoader, Dataset, TensorDataset
 
-from utils.data import load_unsplitted_dataset, BatchDataset
+from utils.data import BatchDataset, load_unsplitted_dataset
 from utils.mlflow import backend_stores
 from utils.models.model_config import ModelConfig
 from utils.trainer import Trainer, TrainingArguments

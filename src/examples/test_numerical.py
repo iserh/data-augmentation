@@ -1,13 +1,14 @@
 import mlflow
+from matplotlib import pyplot as plt
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
-from utils.data.split_datasets import load_unsplitted_dataset
+
 import vae
-from vae import VAEConfig, VAEForDataAugmentation
-from utils.data import load_splitted_datasets, get_dataset, BatchDataset
+from utils.data import BatchDataset, get_dataset, load_splitted_datasets
+from utils.data.split_datasets import load_unsplitted_dataset
 from utils.mlflow import backend_stores
 from utils.trainer import TrainingArguments
-from matplotlib import pyplot as plt
+from vae import VAEConfig, VAEForDataAugmentation
 
 # *** Seeding, loading data & setting up mlflow logging ***
 

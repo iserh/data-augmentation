@@ -1,6 +1,8 @@
 from typing import Callable
+
 import torch
 from torch.utils.data import TensorDataset
+
 from .create_tensordataset import pt_path
 
 

@@ -1,17 +1,20 @@
 from typing import Dict
+
 import mlflow
 import torch
-import vae
-import generative_classifier
-from utils.mlflow import backend_stores
-from utils.trainer import TrainingArguments, Trainer
-from vae import VAEConfig, augmentations, DataAugmentation
-from evaluation import ModelProben1
-from utils.data import get_dataset, load_splitted_datasets, load_unsplitted_dataset
-from torch.utils.data import ConcatDataset
-from utils.models import ModelConfig
-from torch import Tensor
 from sklearn.metrics import accuracy_score, f1_score
+from torch import Tensor
+from torch.utils.data import ConcatDataset
+
+import vae
+from utils.data import get_dataset, load_splitted_datasets, load_unsplitted_dataset
+from utils.mlflow import backend_stores
+from utils.models import ModelConfig
+from utils.trainer import Trainer, TrainingArguments
+from vae import DataAugmentation, VAEConfig, augmentations
+
+import generative_classifier
+from evaluation import ModelProben1
 
 
 def compute_metrics(predictions: Tensor, labels: Tensor) -> Dict[str, float]:
@@ -41,7 +44,7 @@ vae_config = VAEConfig(
     attr={
         "mix": True,
         "multi_vae": True,
-    }
+    },
 )
 VAE_EPOCHS = 625
 AUGMENTATION = augmentations.NORMAL_NOISE
@@ -83,13 +86,15 @@ training_args = TrainingArguments(
     metric_for_best_model="acc",
     log_steps=None,
 )
-model_cfg = ModelConfig(attr={
-    "in_feat": 8,
-    "out_feat": 2,
-    "N": 128,
-    "M": 256,
-    "K": 512,
-})
+model_cfg = ModelConfig(
+    attr={
+        "in_feat": 8,
+        "out_feat": 2,
+        "N": 128,
+        "M": 256,
+        "K": 512,
+    }
+)
 
 # *** Training the CNN ***
 

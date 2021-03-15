@@ -1,11 +1,12 @@
 import mlflow
 import torch
+
 import vae
-from vae import VAEConfig, train_vae
-from vae.models.architectures import VAEModelV1 as VAEModelVersion
-from utils.data import load_splitted_datasets, get_dataset, BatchDataset
+from utils.data import BatchDataset, get_dataset, load_splitted_datasets
 from utils.mlflow import backend_stores
 from utils.trainer import TrainingArguments
+from vae import VAEConfig, train_vae
+from vae.models.architectures import VAEModelV1 as VAEModelVersion
 
 # *** Seeding, loading data & setting up mlflow logging ***
 
@@ -19,21 +20,18 @@ torch.manual_seed(SEED)
 
 # *** VAE Parameters ***
 
-vae_config = VAEConfig(z_dim=8, beta=1.0, attr={
-    "multi_vae": True,
-    "mix": False,
-})
+vae_config = VAEConfig(
+    z_dim=2,
+    beta=1.0,
+    attr={
+        "multi_vae": False,
+        "mix": False,
+    },
+)
 
 # *** Training the VAE ***
 
-training_args = TrainingArguments(
-    epochs=2500,
-    batch_size=64,
-    save_epochs=500,
-    log_steps=50,
-    num_workers=4,
-    lr=5e-4
-)
+training_args = TrainingArguments(epochs=50, batch_size=128, save_epochs=5, log_steps=50, num_workers=4, lr=5e-4)
 
 # set mlflow experiment
 mlflow.set_experiment(f"Z_DIM {vae_config.z_dim}")
@@ -53,6 +51,7 @@ if vae_config.attr["multi_vae"]:
                 seed=SEED,
             )
 else:
+    vae.models.base.model_store = f"pretrained_models/{DATASET}/all_data_single"
     train_dataset = get_dataset(DATASET, train=True)
     with mlflow.start_run():
         train_vae(

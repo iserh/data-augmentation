@@ -1,14 +1,16 @@
-from torch.utils.data.dataset import TensorDataset
-import vae
-from vae import VAEForDataAugmentation, VAEConfig
-from utils.data import get_dataset, ResizeDataset
-from utils.visualization import plot_points, plot_images
+from pathlib import Path
+
+import numpy as np
+import torch
 from sklearn.decomposition import PCA
 from torch.utils.data import DataLoader
-from vae.generation.interpolation import interpolate_attribute, interpolate_along_dimension
-import torch
-import numpy as np
-from pathlib import Path
+from torch.utils.data.dataset import TensorDataset
+
+import vae
+from utils.data import ResizeDataset, get_dataset
+from utils.visualization import plot_images, plot_points
+from vae import VAEConfig, VAEForDataAugmentation
+from vae.generation.interpolation import interpolate_along_dimension, interpolate_attribute
 
 DATASET = "CelebA"
 vae.models.base.model_store = f"pretrained_models/{DATASET}"

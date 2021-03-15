@@ -1,4 +1,4 @@
-from utils.data import split_datasets, load_splitted_datasets
+from utils.data import load_splitted_datasets, split_datasets
 
 DATASET = "MNIST"
 split_datasets(DATASET, reduce=1000, others=True, seed=42)

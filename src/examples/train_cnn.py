@@ -1,15 +1,17 @@
 import mlflow
 import torch
-from utils.data.dataset import ResizeDataset
-import vae
-import generative_classifier
-from utils.mlflow import backend_stores
-from utils.trainer import TrainingArguments
-from vae import VAEConfig, augmentations, DataAugmentation
-from evaluation import CNNMNIST
-from utils.data import get_dataset, load_splitted_datasets, load_unsplitted_dataset, BatchDataset
 from torch.utils.data import ConcatDataset
+
+import vae
+from utils.data import BatchDataset, get_dataset, load_splitted_datasets, load_unsplitted_dataset
+from utils.data.dataset import ResizeDataset
+from utils.mlflow import backend_stores
 from utils.models import ModelConfig
+from utils.trainer import TrainingArguments
+from vae import DataAugmentation, VAEConfig, augmentations
+
+import generative_classifier
+from evaluation import CNNMNIST
 
 # *** Seeding, loading data & setting up mlflow logging ***
 
@@ -54,7 +56,13 @@ with mlflow.start_run(run_name=AUGMENTATION or "baseline") as run:
             seed=SEED,
         )
 
-        generated_datasets = da.augment_datasets([train_dataset], {"n_classes": 1, "class_counts": [len(train_dataset)], "classes": [0]}, AUGMENTATION, K=K, **augmentation_params)
+        generated_datasets = da.augment_datasets(
+            [train_dataset],
+            {"n_classes": 1, "class_counts": [len(train_dataset)], "classes": [0]},
+            AUGMENTATION,
+            K=K,
+            **augmentation_params,
+        )
         train_dataset = ConcatDataset([train_dataset, *generated_datasets])
 
 test_dataset = get_dataset(DATASET, train=False)

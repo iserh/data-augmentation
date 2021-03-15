@@ -1,9 +1,9 @@
+from pathlib import Path
+
 import vae
 from utils.data import get_dataset
 from utils.visualization import plot_images, plot_points
-from vae import VAEForDataAugmentation, VAEConfig
-from pathlib import Path
-
+from vae import VAEConfig, VAEForDataAugmentation
 
 DATASET = "MNIST"
 vae.models.base.model_store = f"pretrained_models/{DATASET}/all_data_single"
@@ -17,7 +17,9 @@ for e in range(5, 51, 5):
     latents, _, labels = model.encode_dataset(dataset).tensors
 
     (filepath / str(vae_config.beta)).mkdir(exist_ok=True, parents=True)
-    plot_points(latents, labels=labels, filename=filepath / str(vae_config.beta) / f"epoch={e}.pdf", xlim=(-6, 6), ylim=(-6, 6))
+    plot_points(
+        latents, labels=labels, filename=filepath / str(vae_config.beta) / f"epoch={e}.pdf", xlim=(-6, 6), ylim=(-6, 6)
+    )
 
 
 # DATASET = "MNIST"

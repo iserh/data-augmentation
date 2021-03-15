@@ -3,14 +3,14 @@ from typing import Callable, Dict, Optional
 
 import pandas as pd
 import torch
+from numpy import ceil
 from torch import Tensor
+from torch.optim import Adam
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
-from numpy import ceil
 
 from utils.mlflow import mlflow_active, mlflow_available
 from utils.models import BaseModel, ModelOutput
-from torch.optim import Adam
 
 from .training_arguments import TrainingArguments
 
@@ -138,7 +138,9 @@ class Trainer:
         metrics = self._compute_metrics(outputs, True)
         # log epoch metrics
         if mlflow_active():
-            mlflow.log_metrics({f"test_{k}_epoch" if k.find("best") == -1 else k: v for k, v in metrics.items()}, step=epoch)
+            mlflow.log_metrics(
+                {f"test_{k}_epoch" if k.find("best") == -1 else k: v for k, v in metrics.items()}, step=epoch
+            )
 
     def evaluate(self) -> Dict[str, float]:
         # create test_loader

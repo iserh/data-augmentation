@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import yaml
-from torch.utils.data import DataLoader, Subset, ConcatDataset, TensorDataset
+from torch.utils.data import ConcatDataset, DataLoader, Subset, TensorDataset
 from yaml.loader import SafeLoader
 
 from utils.data import get_dataset
@@ -11,7 +11,13 @@ from utils.data import get_dataset
 data_path = "datasets/splitted"
 
 
-def split_datasets(dataset_name: str, reduce: Optional[int] = None, others: bool = True, balancing: bool = True, seed: Optional[int] = None) -> None:
+def split_datasets(
+    dataset_name: str,
+    reduce: Optional[int] = None,
+    others: bool = True,
+    balancing: bool = True,
+    seed: Optional[int] = None,
+) -> None:
     # seed
     if seed is not None:
         torch.manual_seed(seed)
@@ -25,8 +31,8 @@ def split_datasets(dataset_name: str, reduce: Optional[int] = None, others: bool
 
     if reduce is not None and balancing:
         unique_labels = torch.unique(labels, sorted=True)
-        inputs = torch.cat([inputs[labels == label][:reduce // len(unique_labels)] for label in unique_labels])
-        labels = torch.cat([labels[labels == label][:reduce // len(unique_labels)] for label in unique_labels])
+        inputs = torch.cat([inputs[labels == label][: reduce // len(unique_labels)] for label in unique_labels])
+        labels = torch.cat([labels[labels == label][: reduce // len(unique_labels)] for label in unique_labels])
 
     # get classes and class counts
     classes, class_counts = torch.unique(labels, sorted=True, return_counts=True)

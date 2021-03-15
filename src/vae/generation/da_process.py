@@ -3,15 +3,16 @@ from dataclasses import fields
 from typing import Any, Dict, List, Optional
 
 import torch
+from sklearn.decomposition import PCA
 from torch import Tensor
 from torch.utils.data import Dataset
-from generative_classifier.models.base import GenerativeClassifierModel
-from utils.models.model_config import ModelConfig
-from utils.visualization import plot_points, plot_images
-from sklearn.decomposition import PCA
 
 from utils.mlflow import mlflow_active, mlflow_available
+from utils.models.model_config import ModelConfig
+from utils.visualization import plot_images, plot_points
 from vae.models import VAEConfig, VAEForDataAugmentation
+
+from generative_classifier.models.base import GenerativeClassifierModel
 
 from .generator import Generator
 
@@ -50,12 +51,14 @@ class DataAugmentation:
             mlflow.log_params(
                 {"vae_" + f.name: getattr(self.vae_config, f.name) for f in fields(self.vae_config) if f.name != "attr"}
             )
-            mlflow.log_params({
-                "vae_epochs": self.vae_epochs,
-                "multi_vae": self.multi_vae,
-                "K": K,
-                "balancing": balancing,
-            })
+            mlflow.log_params(
+                {
+                    "vae_epochs": self.vae_epochs,
+                    "multi_vae": self.multi_vae,
+                    "K": K,
+                    "balancing": balancing,
+                }
+            )
             # log augmentation parameters
             mlflow.log_params(kwargs)
 
@@ -101,17 +104,26 @@ class DataAugmentation:
                 generative_classifier=gc,
             )
 
-            generated_dataset, inputs, labels, latents, generated_latents, origins, others = gen.generate(augmentation, n_generate, **kwargs)
+            generated_dataset, inputs, labels, latents, generated_latents, origins, others = gen.generate(
+                augmentation, n_generate, **kwargs
+            )
             all_latents.append(latents)
             all_generated_latents.append(generated_latents)
             all_labels.append(labels)
             all_generated_labels.append(generated_dataset.tensors[1])
-            self.visualize_class(label, inputs, generated_dataset.tensors[0], latents, generated_latents, origins, others)
+            self.visualize_class(
+                label, inputs, generated_dataset.tensors[0], latents, generated_latents, origins, others
+            )
             generated_datasets.append(generated_dataset)
-        
-        self.visualize_all(torch.cat(all_latents, dim=0), torch.cat(all_generated_latents, dim=0), torch.cat(all_labels, dim=0), torch.cat(all_generated_labels, dim=0))
+
+        self.visualize_all(
+            torch.cat(all_latents, dim=0),
+            torch.cat(all_generated_latents, dim=0),
+            torch.cat(all_labels, dim=0),
+            torch.cat(all_generated_labels, dim=0),
+        )
         return generated_datasets
-    
+
     @staticmethod
     def visualize_all(latents: Tensor, generated_latents: Tensor, labels: Tensor, generated_labels: Tensor):
         pca = PCA(2).fit(latents) if latents.size(0) > 2 else None
@@ -119,9 +131,24 @@ class DataAugmentation:
         plot_points(generated_latents, pca, generated_labels, filename="generated_latents.pdf")
 
     @staticmethod
-    def visualize_class(label: int, inputs: Tensor, generated_inputs: Tensor, latents: Tensor, generated_latents: Tensor, origins: Tensor, others: Tensor):
+    def visualize_class(
+        label: int,
+        inputs: Tensor,
+        generated_inputs: Tensor,
+        latents: Tensor,
+        generated_latents: Tensor,
+        origins: Tensor,
+        others: Tensor,
+    ):
         pca = PCA(2).fit(latents) if latents.size(0) > 2 else None
         plot_points(latents, pca, filename=f"original_latents_class_{label}.pdf", label=label)
         plot_points(generated_latents, pca, filename=f"generated_latents_class_{label}.pdf", label=label)
         plot_images(inputs, n=50, filename=f"images_class_{label}.pdf", images_title=f"original images class {label}")
-        plot_images(generated_inputs, n=50, origins=origins, others=others, filename=f"generated_images_class_{label}.pdf", images_title=f"generated images class {label}")
+        plot_images(
+            generated_inputs,
+            n=50,
+            origins=origins,
+            others=others,
+            filename=f"generated_images_class_{label}.pdf",
+            images_title=f"generated images class {label}",
+        )

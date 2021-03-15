@@ -2,16 +2,16 @@
 from typing import Dict, Optional, Type
 
 import pandas as pd
-from numpy import ceil
 import torch
+from numpy import ceil
 from sklearn.decomposition import PCA
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 from utils.trainer import Trainer, TrainingArguments
+from utils.visualization import plot_images, plot_points
 from vae.models import VAEConfig, VAEForDataAugmentation, VAEOutput
 from vae.models.base import VAEModel
-from utils.visualization import plot_images, plot_points
 
 
 class VAETrainer(Trainer):
