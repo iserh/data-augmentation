@@ -66,6 +66,7 @@ class DataAugmentation:
         # load generative classifier
         # load vae now if not using multi vae
         if not self.multi_vae:
+            print(self.vae_config)
             vae = VAEForDataAugmentation.from_pretrained(self.vae_config, epochs=self.vae_epochs)
         if self.gc_config is not None:
             gc = GenerativeClassifierModel.from_pretrained(self.gc_config, epochs=self.gc_epochs)
@@ -114,13 +115,13 @@ class DataAugmentation:
     @staticmethod
     def visualize_all(latents: Tensor, generated_latents: Tensor, labels: Tensor, generated_labels: Tensor):
         pca = PCA(2).fit(latents) if latents.size(0) > 2 else None
-        plot_points(latents, pca, labels, filename="original_latents.png")
-        plot_points(generated_latents, pca, generated_labels, filename="generated_latents.png")
+        plot_points(latents, pca, labels, filename="original_latents.pdf")
+        plot_points(generated_latents, pca, generated_labels, filename="generated_latents.pdf")
 
     @staticmethod
     def visualize_class(label: int, inputs: Tensor, generated_inputs: Tensor, latents: Tensor, generated_latents: Tensor, origins: Tensor, others: Tensor):
         pca = PCA(2).fit(latents) if latents.size(0) > 2 else None
-        plot_points(latents, pca, filename=f"original_latents_class_{label}.png", label=label)
-        plot_points(generated_latents, pca, filename=f"generated_latents_class_{label}.png", label=label)
-        plot_images(inputs, n=50, filename=f"images_class_{label}.png", images_title=f"original images class {label}")
-        plot_images(generated_inputs, n=50, origins=origins, others=others, filename=f"generated_images_class_{label}.png", images_title=f"generated images class {label}")
+        plot_points(latents, pca, filename=f"original_latents_class_{label}.pdf", label=label)
+        plot_points(generated_latents, pca, filename=f"generated_latents_class_{label}.pdf", label=label)
+        plot_images(inputs, n=50, filename=f"images_class_{label}.pdf", images_title=f"original images class {label}")
+        plot_images(generated_inputs, n=50, origins=origins, others=others, filename=f"generated_images_class_{label}.pdf", images_title=f"generated images class {label}")

@@ -12,26 +12,26 @@ class _Encoder(Encoder):
     def __init__(self, z_dim: int, nc: int) -> None:
         super(_Encoder, self).__init__()
         self.conv_stage = nn.Sequential(
-            # input is (nc) x 32 x 32
+            # input is (nc) x 64 x 64
             nn.Conv2d(nc, 64, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (64) x 16 x 16
+            # state size. (64) x 32 x 32
             nn.Conv2d(64, 64 * 2, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.BatchNorm2d(64 * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (64*2) x 8 x 8
+            # state size. (64*2) x 16 x 16
             nn.Conv2d(64 * 2, 64 * 4, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.BatchNorm2d(64 * 4),
+            # state size. (64*4) x 8 x 8
+            nn.Conv2d(64 * 4, 64 * 8, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (64*4) x 4 x 4
-            # nn.Conv2d(64 * 4, 64 * 8, 4, 2, 1, bias=False),
-            # nn.BatchNorm2d(64 * 8),
-            # nn.LeakyReLU(0.2, inplace=True),
-            # # state size. (64*8) x 2 x 2
+            nn.BatchNorm2d(64 * 8),
+            # # state size. (64*8) x 4 x 4
             nn.Flatten(),
-            nn.Linear(64 * 4 * 4 * 4, 128),
-            nn.BatchNorm1d(128),
+            nn.Linear(64 * 8 * 4 * 4, 128),
             nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm1d(128),
         )
         # Encoder mean
         self.mean = nn.Linear(128, z_dim)
@@ -53,24 +53,24 @@ class _Decoder(Decoder):
         super(_Decoder, self).__init__()
         self.linear_stage = nn.Sequential(
             nn.Linear(z_dim, 128),
-            nn.Linear(128, 64 * 4 * 4 * 4),
+            nn.Linear(128, 64 * 8 * 4 * 4),
         )
         self.conv_stage = nn.Sequential(
-            # # state size. (64*8) x 2 x 2
-            # nn.ConvTranspose2d(64 * 8, 64 * 4, 4, 2, 1, bias=False),
-            # nn.BatchNorm2d(64 * 4),
-            # nn.ReLU(True),
-            # state size. (64*4) x 4 x 4
+            # # state size. (64*8) x 4 x 4
+            nn.ConvTranspose2d(64 * 8, 64 * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(64 * 4),
+            nn.ReLU(True),
+            # state size. (64*4) x 8 x 8
             nn.ConvTranspose2d(64 * 4, 64 * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(64 * 2),
             nn.ReLU(True),
-            # state size. (64*2) x 8 x 8
+            # state size. (64*2) x 16 x 16
             nn.ConvTranspose2d(64 * 2, 64, 4, 2, 1, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(True),
-            # state size. (64) x 16 x 16
+            # state size. (64) x 32 x 32
             nn.ConvTranspose2d(64, nc, 4, 2, 1, bias=False),
-            # state size. (3) x 32 x 32
+            # state size. (3) x 64 x 64
             nn.Sigmoid(),
         )
 
@@ -80,7 +80,7 @@ class _Decoder(Decoder):
 
     def forward(self, x: Tensor) -> Tensor:
         x = self.linear_stage(x)
-        x = x.view(x.size(0), 64 * 4, 4, 4)
+        x = x.view(x.size(0), 64 * 8, 4, 4)
         return self.conv_stage(x)
 
 

@@ -1,16 +1,17 @@
 """Trainer for VAEs."""
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Dict, Optional
 
 import pandas as pd
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
+from numpy import ceil
 
 from utils.mlflow import mlflow_active, mlflow_available
 from utils.models import BaseModel, ModelOutput
+from torch.optim import Adam
 
-from .early_stopping import EarlyStopping
 from .training_arguments import TrainingArguments
 
 if mlflow_available:
@@ -23,26 +24,19 @@ class Trainer:
         args: TrainingArguments,
         model: BaseModel,
         train_dataset: Dataset,
-        dev_dataset: Optional[Dataset] = None,
         test_dataset: Optional[Dataset] = None,
-        step_metrics: Optional[Callable] = None,
-        epoch_metrics: Optional[Callable] = None,
+        compute_metrics: Optional[Callable] = None,
     ) -> None:
         self.args = args
         self.train_dataset = train_dataset
-        self.dev_dataset = dev_dataset
         self.test_dataset = test_dataset
-        self.step_metrics = step_metrics
-        self.epoch_metrics = epoch_metrics
+        self.compute_metrics = compute_metrics
         # Use cuda if available
         self.device = "cuda:0" if torch.cuda.is_available() and not args.no_cuda else "cpu"
         # Model
         self.model = model.to(self.device)
         # Optimizer
-        self.optim = torch.optim.Adam(self.model.parameters(), weight_decay=5e-3)
-        # Early Stopping
-        if self.args.early_stopping:
-            self.early_stop_monitor = EarlyStopping(n=self.args.early_stopping_window)
+        self.optim = Adam(self.model.parameters(), weight_decay=args.weight_decay, lr=args.lr)
 
     def train(self) -> None:
         # seeding
@@ -53,159 +47,137 @@ class Trainer:
         train_loader = DataLoader(
             self.train_dataset, batch_size=self.args.batch_size, shuffle=True, pin_memory=True, num_workers=4
         )
-        test_loader = DataLoader(self.dev_dataset, batch_size=512, shuffle=False, pin_memory=True, num_workers=4) if self.dev_dataset is not None else None
-
-        # raise error if both 'total steps' and 'epochs' provided in train args
-        if self.args.total_steps is not None:
-            self.total_steps = self.args.total_steps
-            if self.args.epochs is not None:
-                raise ValueError("Only specify 'epochs' or 'total_steps' in training arguments!")
-        # use 'epochs' parameter if 'total_steps' is not defined
-        elif self.args.epochs is not None:
-            self.total_steps = self.args.epochs * len(train_loader)
-        # raise error if none of 'epochs' or 'total_steps' is defined
-        else:
-            raise ValueError("You must either specify 'epochs' or 'total_steps' in training arguments!")
-        # set validation intervall
-        self.validation_intervall = self.args.validation_intervall or len(train_loader)
+        test_loader = (
+            DataLoader(self.test_dataset, batch_size=512, shuffle=False, pin_memory=True, num_workers=4)
+            if self.test_dataset is not None
+            else None
+        )
 
         # log config
-        if mlflow_available():
+        if mlflow_active():
             mlflow.log_params(self.args.__dict__)
+            mlflow.log_param("total_steps", self.args.epochs * len(train_loader))
             mlflow.log_params(self.model.config.__dict__)
             mlflow.log_param("train_dataset_size", len(self.train_dataset))
-            if self.dev_dataset is not None:
-                mlflow.log_param("dev_dataset_size", len(self.dev_dataset))
+            if self.test_dataset is not None:
+                mlflow.log_param("test_dataset_size", len(self.test_dataset))
 
-        step_stopped, epoch_stopped = self.train_loop(train_loader, test_loader)
+        # reset step counter
+        self.step = 0
+        # reset best model tracker
+        if self.args.metric_for_best_model is not None:
+            self.best_score = 0
+        # start training
+        with tqdm(total=self.args.epochs * len(train_loader)) as pbar:
+            for e in range(1, self.args.epochs + 1):
+                # update tqdm description
+                pbar.set_description(f"Training epoch {e}/{self.args.epochs}", refresh=True)
+                # train epoch
+                self.train_epoch(e, train_loader, pbar)
+                # test epoch
+                if test_loader is not None:
+                    self.test_epoch(test_loader, e, pbar)
+                # optional save model
+                if self.args.save_model and self.args.save_epochs and e % self.args.save_epochs == 0:
+                    self.model.save(e)
 
         # save final model
-        if self.args.save_model and (self.args.save_intervall is None or step_stopped % self.args.save_intervall != 0):
-            self.model.save(epoch_stopped)
+        if self.args.save_model:
+            self.model.save(self.args.epochs)
 
-    def train_loop(self, train_loader: DataLoader, test_loader: DataLoader) -> Tuple[int, int]:
-        # initialize epoch & step counter
-        epoch, step = 1, 0
-        # gather outputs
+    def train_epoch(self, epoch: int, train_loader: DataLoader, pbar: tqdm) -> None:
+        # output df for metric calculation
         outputs = pd.DataFrame()
-        # initialize train iterator
-        train_iterator = iter(train_loader)
-        # get the first batch
-        batch = next(train_iterator)
-        # set early stop initially to False
-        early_stop = False
-        with tqdm(total=self.total_steps, desc="Training epoch 1") as pbar:
-            for step in range(1, self.total_steps + 1):
-                # set model to train mode
-                self.model.train()
-                out = self.train_step(*[x.to(self.device, non_blocking=True) for x in batch])
-                # train one step and remember outputs
-                outputs = pd.concat(
-                    [outputs, pd.DataFrame(out)],
-                    ignore_index=True,
-                )
-                # compute step metrics
-                metrics = self.log_step(outputs.iloc[-len(batch) :], validate=False)
-                # log to mlflow
-                if mlflow_available():
-                    mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=step)
-                # progress bar
-                pbar.set_postfix({k: f"{v:7.2f}" for k, v in metrics.items()})
-                pbar.update(1)
-
-                # validation on val dataset
-                if step % self.validation_intervall == 0 and test_loader is not None:
-                    val_metrics, early_stop = self.validate(test_loader)
-                    if mlflow_available():
-                        mlflow.log_metrics({"test_" + k: v for k, v in val_metrics.items()}, step=step)
-
-                # optional save model
-                if self.args.save_model and self.args.save_intervall and step % self.args.save_intervall == 0:
-                    self.model.save(epoch)
-
-                # get the next batch or None if end of trainloader is reached
-                batch = next(train_iterator, None)
-                # if end of trainloader is reached, it marks the end of an epoch
-                if batch is None:
-                    # re-initialize train_iterator
-                    train_iterator = iter(train_loader)
-                    # get the next batch
-                    batch = next(train_iterator)
-                    # compute epoch metrics
-                    metrics = self.log_epoch(outputs, validate=False)
-                    # log epoch metrics
-                    if mlflow_available():
-                        mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=epoch)
-                    # reset outputs
-                    outputs = pd.DataFrame()
-                    # update epoch counter and tqdm description
-                    if not step >= self.total_steps:
-                        epoch += 1
-                        pbar.set_description(f"Training epoch {epoch}", refresh=True)
-
-                if early_stop:
-                    break
-
-        # return step, epoch stopped
-        return step, epoch
-
-    def validate(self, test_loader: DataLoader, evaluation: bool = False) -> Tuple[Dict[str, float], bool]:
-        # set to eval mode
-        self.model.eval()
-        # gather outputs
-        outputs = pd.DataFrame()
-        # validate test_loader
-        # with tqdm(total=len(test_loader), desc="Validation", leave=False) as test_pbar:
-        for batch in test_loader:
-            # test step, update running loss
+        # set model to train mode
+        self.model.train()
+        for batch in train_loader:
+            # make a train step, collect output
+            out = self.train_step(*[t.to(self.device, non_blocking=True) for t in batch])
+            # append output to outputs df
             outputs = pd.concat(
-                [outputs, pd.DataFrame(self.test_step(*[x.to(self.device, non_blocking=True) for x in batch]))],
+                [outputs, pd.DataFrame(out)],
                 ignore_index=True,
             )
-            metrics = self.log_step(outputs.iloc[-len(batch) :], validate=not evaluation)
-            # # progress bar
-            # test_pbar.set_postfix({k: f"{v:7.2f}" for k, v in metrics.items()})
-            # test_pbar.update(1)
-        # compute epoch metrics and concat with step metrics of last step
-        metrics = {**metrics, **self.log_epoch(outputs, validate=not evaluation)}
-        # return validation metrics and early stop
-        return metrics, self.args.early_stopping and self.early_stop_monitor(outputs["loss"].mean())
+            # compute step metrics
+            metrics = self._compute_metrics(outputs.iloc[-len(batch) :], update_best_metric=False)
+            # log to mlflow
+            if (
+                mlflow_active()
+                and self.args.log_steps is not None
+                and self.step % self.args.log_steps == 0
+                and self.step != 0
+            ):
+                mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=self.step)
+            # progress bar
+            pbar.set_postfix({k: f"{v:7.2f}" for k, v in metrics.items()})
+            pbar.update()
+
+            self.step += 1
+
+        # compute epoch metrics
+        metrics = self._compute_metrics(outputs, update_best_metric=False)
+        # log epoch metrics
+        if mlflow_active():
+            mlflow.log_metrics({f"train_{k}_epoch": v for k, v in metrics.items()}, step=epoch)
+
+    def test_epoch(self, test_loader: DataLoader, epoch: Optional[int] = None, pbar: Optional[tqdm] = None) -> None:
+        # output df for metric calculation
+        outputs = pd.DataFrame()
+        # set model to train mode
+        self.model.eval()
+        for batch in test_loader:
+            # make a train step, collect output
+            out = self.test_step(*[t.to(self.device, non_blocking=True) for t in batch])
+            # append output to outputs df
+            outputs = pd.concat(
+                [outputs, pd.DataFrame(out)],
+                ignore_index=True,
+            )
+
+        # compute epoch metrics
+        metrics = self._compute_metrics(outputs, True)
+        # log epoch metrics
+        if mlflow_active():
+            mlflow.log_metrics({f"test_{k}_epoch" if k.find("best") == -1 else k: v for k, v in metrics.items()}, step=epoch)
 
     def evaluate(self) -> Dict[str, float]:
         # create test_loader
         test_loader = DataLoader(self.test_dataset, batch_size=512, shuffle=False, pin_memory=True, num_workers=4)
-        # tmp save model
-        model = self.model
+        # output df for metric calculation
+        outputs = pd.DataFrame()
+        tmp_model = self.model
         self.model = self.best_model
-        # call validate
-        print("Evaluating model.")
-        metrics, _ = self.validate(test_loader)
-        self.model = model
-        # log to mlflow
-        if mlflow_available():
-            mlflow.log_metrics({"eval_" + k: v for k, v in metrics.items()})
-        return {"eval_" + k: v for k, v in metrics.items()}
+        # set model to train mode
+        self.model.eval()
+        for batch in test_loader:
+            # make a train step, collect output
+            out = self.test_step(*[t.to(self.device, non_blocking=True) for t in batch])
+            # append output to outputs df
+            outputs = pd.concat(
+                [outputs, pd.DataFrame(out)],
+                ignore_index=True,
+            )
+        self.model = tmp_model
 
-    def log_epoch(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
-        metrics = (
-            self.epoch_metrics(outputs["prediction"], outputs["label"], validate=validate) if self.epoch_metrics else {}
-        )
+        # compute epoch metrics
+        metrics = self._compute_metrics(outputs, False)
+        # log epoch metrics
+        if mlflow_active():
+            mlflow.log_metrics({f"eval_{k}": v for k, v in metrics.items()})
+        return metrics
+
+    def _compute_metrics(self, outputs: pd.DataFrame, update_best_metric: bool = False) -> Dict[str, float]:
+        metrics = self.compute_metrics(outputs["prediction"], outputs["label"]) if self.compute_metrics else {}
         # save best model
-        if self.args.save_best_metric is not None and metrics.get(self.args.save_best_metric, False):
+        if (
+            update_best_metric
+            and self.args.metric_for_best_model is not None
+            and metrics.get(self.args.metric_for_best_model, False)
+            and metrics[self.args.metric_for_best_model] > self.best_score
+        ):
+            self.best_score = metrics[self.args.metric_for_best_model]
+            metrics[f"best_{self.args.metric_for_best_model}"] = self.best_score
             self.best_model = self.model.__class__(self.model.config).to(self.model.config.device)
-            self.best_model.load_state_dict(self.model.state_dict())
-        return {
-            "loss": outputs["loss"].mean(),
-            **metrics,
-        }
-
-    def log_step(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
-        metrics = (
-            self.step_metrics(outputs["prediction"], outputs["label"], validate=validate) if self.step_metrics else {}
-        )
-        # save best model
-        if self.args.save_best_metric is not None and metrics.get(self.args.save_best_metric, False):
-            self.best_model = self.model.__class__(self.model.config)
             self.best_model.load_state_dict(self.model.state_dict())
         return {
             "loss": outputs["loss"].mean(),

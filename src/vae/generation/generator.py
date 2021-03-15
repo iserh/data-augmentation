@@ -74,7 +74,7 @@ class Generator:
                 if is_real.all():
                     all_good = True
                 else:
-                    plot_images(decoded_inputs[~is_real], n=50, filename=f"noise-iteration-{i}.png")
+                    plot_images(decoded_inputs[~is_real], n=50, filename=f"noise-iteration-{i}.pdf")
                 final_inputs.append(decoded_inputs[is_real])
                 final_labels.append(sample_labels[is_real])
                 final_generated_latents.append(generated_latents[is_real])
@@ -82,7 +82,11 @@ class Generator:
                 final_others.append(others[is_real] if others is not None else None)
                 n = n - is_real.sum()
             else:
-                final_inputs, final_labels = decoded_inputs, sample_labels
+                final_inputs.append(decoded_inputs)
+                final_labels.append(sample_labels)
+                final_generated_latents.append(generated_latents)
+                final_origins.append(origins if origins is not None else None)
+                final_others.append(others if others is not None else None)
                 all_good = True
         
         final_inputs = torch.cat(final_inputs, dim=0)

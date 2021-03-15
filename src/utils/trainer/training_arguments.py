@@ -7,14 +7,13 @@ class TrainingArguments:
     """Training arguments dataclass."""
 
     epochs: Optional[int] = None
-    total_steps: Optional[int] = None
     no_cuda: bool = False
-    save_intervall: Optional[int] = None
+    save_epochs: Optional[int] = None
     save_model: bool = True
+    log_steps: Optional[int] = 50
     seed: Optional[int] = None
-    batch_size: int = 128
-    early_stopping: bool = False
-    early_stopping_window: int = 10
-    validation_intervall: Optional[int] = None
-    save_best_metric: Optional[str] = None
-    no_mlflow: bool = False
+    batch_size: int = 64
+    metric_for_best_model: Optional[str] = None
+    weight_decay: float = 5e-3
+    lr: float = 5e-4
+    num_workers: int = 4

@@ -3,7 +3,6 @@ from typing import Tuple
 
 import torch.nn as nn
 from torch import Tensor
-from torch.nn.modules.activation import ReLU
 
 from utils import init_weights
 from vae.models.base import Decoder, Encoder, VAEConfig, VAEModel
@@ -16,21 +15,25 @@ class _Encoder(Encoder):
             # input size: (nc) x 28 x 28
             nn.ZeroPad2d((0, 1, 0, 1)),
             nn.Conv2d(nc, nc, 2, 1),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
             # state size: (nc) x 28 x 28
             nn.Conv2d(nc, 64, 2, 2),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm2d(64),
             # state size: (64) x 14 x 14
             nn.Conv2d(64, 64, 3, 1, 1),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm2d(64),
             # state size: (64) x 14 x 14
             nn.Conv2d(64, 64, 3, 1, 1),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm2d(64),
             # state size: (64) x 14 x 14
             nn.Flatten(),
             # state size: 64 * 14 * 14
             nn.Linear(64 * 14 * 14, 128),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm1d(128),
             # output size: 128
         )
         # Encoder mean
@@ -54,20 +57,27 @@ class _Decoder(Decoder):
         self.upsampling = nn.Sequential(
             # input size: z_dim
             nn.Linear(z_dim, 128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm1d(128),
             # state size: 128
             nn.Linear(128, 64 * 14 * 14),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm1d(64 * 14 * 14),
             # output size: 64 * 14 * 14
         )
         self.decoder = nn.Sequential(
             # input size: (64) x 14 x 14
             nn.ConvTranspose2d(64, 64, 3, 1, 1),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm2d(64),
             # state size: (64) x 14 x 14
             nn.ConvTranspose2d(64, 64, 3, 1, 1),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm2d(64),
             # state size: (64) x 14 x 14
             nn.ConvTranspose2d(64, 64, 3, 2),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.BatchNorm2d(64),
             # state size: (64) x 29 x 29
             nn.ZeroPad2d((0, -2, 0, -2)),
             # state size: (64) x 27 x 27 ! TODO: better solution for padding

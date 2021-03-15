@@ -55,9 +55,22 @@ def interpolate_along_class(latents: Tensor, labels: Tensor, n_steps: int) -> Te
 
 def interpolate_along_dimension(z: Tensor, n_steps: int) -> Tensor:
     interpolated = []
-    for dim in range(z.size(0)):
+    for dim in range(z.size(-1)):
         other_dims = z.unsqueeze(0).expand((n_steps, z.size(0))).clone()
-        x = np.linspace(z[dim] - 3, z[dim] + 3, n_steps)
+        x = np.linspace(z[dim] - 6, z[dim] + 6, n_steps)
         other_dims[:, dim] = torch.Tensor(x)
         interpolated.append(other_dims)
     return torch.stack(interpolated, dim=0)
+
+
+def interpolate_attribute(latents: Tensor, labels: Tensor, n_steps: int) -> Tensor:
+    interpolated, corresponding_targets = [], []
+    for i in range(labels.size(1)):
+        mask = labels[:, i] == 1
+        pca = PCA(1).fit(latents[mask.flatten()])
+        pc = pca.transform(latents)
+        x = np.expand_dims(np.linspace(pc.min(), pc.max(), n_steps), axis=1)
+        interpolated.append(torch.Tensor(pca.inverse_transform(x)))
+        corresponding_targets.append(torch.Tensor([i] * n_steps))
+
+    return torch.stack(interpolated, dim=0), torch.stack(corresponding_targets, dim=0)

@@ -46,7 +46,7 @@ train_dataset, _ = load_unsplitted_dataset(DATASET)
 train_dataset = ConcatDataset(add_noise_to_dataset(train_dataset))
 
 training_args = TrainingArguments(
-    epochs=1, seed=1337, batch_size=512, validation_intervall=ceil(len(train_dataset) / 512), no_cuda=True
+    epochs=1, seed=1337, batch_size=512, validation_intervall=int(ceil(len(train_dataset) / 512)), no_cuda=True
 )
 
 trainer = Trainer(
@@ -62,6 +62,6 @@ mlflow.set_experiment("Generative Classifier")
 
 with mlflow.start_run():
     mlflow.log_param("dataset_size", len(train_dataset))
-    plot_images(train_dataset.datasets[1].tensors[0], n=50, filename="uniform.png", images_title="Unform Noise")
-    plot_images(train_dataset.datasets[2].tensors[0], n=50, filename="gaussian.png", images_title="Gaussian Noise")
+    plot_images(train_dataset.datasets[1].tensors[0], n=50, filename="uniform.pdf", images_title="Unform Noise")
+    plot_images(train_dataset.datasets[2].tensors[0], n=50, filename="gaussian.pdf", images_title="Gaussian Noise")
     trainer.train()

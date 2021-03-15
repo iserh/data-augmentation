@@ -2,8 +2,8 @@
 from typing import Dict, Optional, Type
 
 import pandas as pd
-import torch
 from numpy import ceil
+import torch
 from sklearn.decomposition import PCA
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
@@ -15,22 +15,11 @@ from utils.visualization import plot_images, plot_points
 
 
 class VAETrainer(Trainer):
-    def log_epoch(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
-        metrics = self.epoch_metrics(outputs["prediction"], outputs["label"]) if self.epoch_metrics else {}
+    def _compute_metrics(self, outputs: pd.DataFrame, update_best_metric: bool = False) -> Dict[str, float]:
         bce_losses, kl_losses = [*zip(*[(loss.r_loss, loss.kl_loss) for _, loss in outputs["loss"].iteritems()])]
         return {
             "bce_l": sum(bce_losses) / len(bce_losses),
             "kl_l": sum(kl_losses) / len(kl_losses),
-            **metrics,
-        }
-
-    def log_step(self, outputs: pd.DataFrame, validate: bool = False) -> Dict[str, float]:
-        metrics = self.step_metrics(outputs["prediction"], outputs["label"]) if self.step_metrics else {}
-        bce_losses, kl_losses = [*zip(*[(loss.r_loss, loss.kl_loss) for _, loss in outputs["loss"].iteritems()])]
-        return {
-            "bce_l": sum(bce_losses) / len(bce_losses),
-            "kl_l": sum(kl_losses) / len(kl_losses),
-            **metrics,
         }
 
     def train_step(self, x: Tensor, y: Optional[Tensor] = None) -> Dict[str, float]:
@@ -56,18 +45,12 @@ def train_vae(
     train_dataset: Dataset,
     model_architecture: Type[VAEModel],
     vae_config: VAEConfig,
-    save_every_n_epochs: Optional[int] = None,
     seed: Optional[int] = None,
 ) -> None:
     # seed
     if seed is not None:
         torch.manual_seed(seed)
         training_args.seed = seed
-
-    if save_every_n_epochs is not None:
-        training_args.save_intervall = save_every_n_epochs * ceil(len(train_dataset) / training_args.batch_size).astype(
-            int
-        )
 
     # create model
     model = model_architecture(vae_config)
@@ -83,15 +66,20 @@ def train_vae(
     model = trainer.train()
     del model
 
-    # visualization
-    vae = VAEForDataAugmentation.from_pretrained(vae_config, epochs=training_args.epochs)
+    # epochs trained
+    epochs_trained = training_args.epochs or int(
+        ceil(training_args.total_steps / ceil(len(train_dataset) / training_args.batch_size))
+    )
 
-    encoded = vae.encode_dataset(train_dataset)
-    pca = PCA(2).fit(encoded.tensors[0]) if encoded.tensors[0].size(1) > 2 else None
-    reals, labels = next(iter(DataLoader(train_dataset, batch_size=len(train_dataset), num_workers=4)))
-    fakes = vae.decode_dataset(TensorDataset(encoded.tensors[0], encoded.tensors[1])).tensors[0]
+    # visualization
+    vae = VAEForDataAugmentation.from_pretrained(vae_config, epochs=epochs_trained)
+
+    latents = vae.encode_dataset(train_dataset).tensors[0][:10_000]
+    pca = PCA(2).fit(latents) if latents.size(1) > 2 else None
+    reals, labels = next(iter(DataLoader(train_dataset, batch_size=10_000, num_workers=4)))
+    fakes = vae.decode_dataset(TensorDataset(latents, labels)).tensors[0]
     plot_points(
-        encoded.tensors[0],
+        latents,
         pca=pca,
         labels=labels,
     )
@@ -101,12 +89,12 @@ def train_vae(
         origins=reals,
         images_title="Fakes",
         origins_title="Original",
-        filename="Real-Fake.png",
+        filename="Real-Fake.pdf",
     )
 
     # random images
     z = torch.normal(0, 1, size=(200, vae_config.z_dim))
     labels = torch.ones((200,))  # arbitrary labels
     fakes = vae.decode_dataset(TensorDataset(z, labels)).tensors[0]
-    plot_points(z, pca=pca, filename="random_latents.png")
-    plot_images(fakes, 50, filename="random_fakes.png")
+    plot_points(z, pca=pca, filename="random_latents.pdf")
+    plot_images(fakes, 50, filename="random_fakes.pdf")

@@ -1,3 +1,2 @@
 """Evaluation."""
-from .train_utils import train_model
-from .models import CNNMNIST
+from .models import CNNMNIST, ModelProben1  # noqa: F401

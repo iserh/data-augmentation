@@ -31,26 +31,34 @@ def plot_points(
         labels (Optional[Tensor]): Labels for coloring/legend
         **kwargs: Keyword arguments
             filename (str): Name of the output file
+            xlim (Tuple[float, float]): Limits of the plot (x)
+            ylim (Tuple[float, float]): Limits of the plot (y)
+            title
     """
     if pca is not None:
         points = pca.transform(points)
     # create pyplot figure and axes
-    fig = plt.figure(figsize=(16, 16))
-    fig.patch.set_alpha(0.0)
-    ax = fig.add_subplot(xlim=(-4, 4), ylim=(-4, 4))
+    fig = plt.figure(figsize=(6.4, 6.4), tight_layout=True)
+    plt.xlim(kwargs.get("xlim", (-4, 4)))
+    plt.ylim(kwargs.get("ylim", (-4, 4)))
+    if kwargs.get("title", False):
+        plt.title(kwargs["title"], fontdict={"fontsize": 32})
     # plot latents to figure
     if labels is not None:
         classes = torch.unique(labels, sorted=True).int().tolist()
         for c in classes:
             mask = labels.flatten() == c
-            ax.scatter(*points[mask].T, label=f"{c}")
+            plt.scatter(*points[mask].T, label=f"{c}", s=5)
         plt.legend()
     else:
-        ax.scatter(*points.T)
+        plt.scatter(*points.T, s=5)
     if mlflow_active():
-        mlflow.log_figure(fig, kwargs.get("filename", "latents.png"))
+        mlflow.log_figure(fig, kwargs.get("filename", "latents.pdf"))
     else:
-        plt.show()
+        if kwargs.get("filename", False):
+            plt.savefig(kwargs["filename"])
+        else:
+            plt.show()
     plt.close()
 
 
@@ -79,20 +87,25 @@ def plot_images(
             origins_title (str): Title of the origins subplot
             others_title (str): Title of the others subplot
     """
-    fig = plt.figure(figsize=(15, 15))
-    fig.patch.set_alpha(0.0)
-    if origins is None or others is None:
-        n_plots = 1 if origins is None and others is None else 2
+    n_plots = 1
+    if origins is not None:
+        n_plots += 1
+    if others is not None:
+        n_plots += 1
+
+    if n_plots > 1:
+        fig, axes = plt.subplots(ncols=n_plots, tight_layout=True)
     else:
-        n_plots = 3
+        fig = plt.figure(tight_layout=True)
+        axes = [plt.axes()]
 
     to_grayscale = transforms.Grayscale(1) if grayscale else lambda x: x
+    i = 0
 
     # Plot the images
-    plt.subplot(1, n_plots, 1)
-    plt.axis("off")
-    plt.title(kwargs.get("images_title", "Images"))
-    plt.imshow(
+    axes[i].set_title(kwargs.get("images_title", "Images"))
+    axes[i].axis("off")
+    axes[i].imshow(
         np.transpose(
             to_grayscale(vutils.make_grid(images[:n], padding=5, normalize=True, nrow=cols)),
             (1, 2, 0),
@@ -103,10 +116,10 @@ def plot_images(
 
     # Plot the heritages
     if origins is not None:
-        plt.subplot(1, n_plots, 2)
-        plt.axis("off")
-        plt.title(kwargs.get("origins_title", "Origins"))
-        plt.imshow(
+        i += 1
+        axes[i].set_title(kwargs.get("origins_title", "Origins"))
+        axes[i].axis("off")
+        axes[i].imshow(
             np.transpose(
                 to_grayscale(vutils.make_grid(origins[:n], padding=5, normalize=True, nrow=cols)),
                 (1, 2, 0),
@@ -117,10 +130,10 @@ def plot_images(
 
     # plot the images that were used for generation
     if others is not None:
-        plt.subplot(1, n_plots, 3)
-        plt.axis("off")
-        plt.title(kwargs.get("others_title", "Others"))
-        plt.imshow(
+        i += 1
+        axes[i].title(kwargs.get("others_title", "Others"))
+        axes[i].axis("off")
+        axes[i].imshow(
             np.transpose(
                 to_grayscale(vutils.make_grid(others[:n], padding=5, normalize=True, nrow=cols)),
                 (1, 2, 0),
@@ -130,7 +143,10 @@ def plot_images(
         )
 
     if mlflow_active():
-        mlflow.log_figure(fig, kwargs.get("filename", "images.png"))
+        mlflow.log_figure(fig, kwargs.get("filename", "images.pdf"))
     else:
-        plt.show()
+        if kwargs.get("filename", False):
+            plt.savefig(kwargs["filename"])
+        else:
+            plt.show()
     plt.close()
