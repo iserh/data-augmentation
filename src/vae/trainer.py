@@ -75,7 +75,7 @@ def train_vae(
     vae = VAEForDataAugmentation.from_pretrained(vae_config, epochs=epochs_trained)
 
     latents = vae.encode_dataset(train_dataset).tensors[0][:10_000]
-    pca = PCA(2).fit(latents) if latents.size(1) > 2 else None
+    pca = PCA(2).fit(latents) if latents.size(-1) > 2 else None
     reals, labels = next(iter(DataLoader(train_dataset, batch_size=10_000, num_workers=4)))
     fakes = vae.decode_dataset(TensorDataset(latents, labels)).tensors[0]
     plot_points(
