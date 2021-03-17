@@ -14,7 +14,8 @@ from utils.trainer import Trainer, TrainingArguments
 from vae import DataAugmentation, VAEConfig, augmentations
 
 import generative_classifier
-from evaluation import ModelProben1
+from evaluation import CNNMNIST as ModelForClassification
+# from evaluation import ModelProben1 as ModelForClassification
 
 
 def compute_metrics(predictions: Tensor, labels: Tensor) -> Dict[str, float]:
@@ -25,8 +26,8 @@ def compute_metrics(predictions: Tensor, labels: Tensor) -> Dict[str, float]:
 
 # *** Seeding, loading data & setting up mlflow logging ***
 
-SEED = 1337
-DATASET = "diabetes"
+SEED = 42
+DATASET = "MNIST"
 MIX = False
 # seed torch
 torch.manual_seed(SEED)
@@ -39,26 +40,26 @@ train_dataset, _ = load_unsplitted_dataset(DATASET)
 # *** Parameters for data augmentation ***
 
 vae_config = VAEConfig(
-    z_dim=2,
-    beta=0.001,
+    z_dim=3,
+    beta=1.0,
     attr={
-        "mix": True,
+        "mix": False,
         "multi_vae": True,
     },
 )
-VAE_EPOCHS = 625
-AUGMENTATION = augmentations.NORMAL_NOISE
+VAE_EPOCHS = 3000
+AUGMENTATION = augmentations.REPARAMETRIZATION
 USE_GC = False
-K = 400
-augmentation_params = {"std": 1}
+K = 500
+augmentation_params = {}
 # set model store path
-vae.models.base.model_store = f"pretrained_models/{DATASET}"
+vae.models.base.model_store = f"pretrained_models/{DATASET}/{sum(dataset_info['class_counts'])}"
 # set gc path
-generative_classifier.models.base.model_store = "generative_classifiers/{DATASET}"
+# generative_classifier.models.base.model_store = f"generative_classifiers/{DATASET}"
 
 # *** Data Augmentation ***
 
-mlflow.set_experiment(f"CNN Z_DIM {vae_config.z_dim}" if AUGMENTATION else "CNN Baseline")
+mlflow.set_experiment(f"Evaluation {'MULTI' if vae_config.attr['multi_vae'] else 'SINGLE'} {sum(dataset_info['class_counts'])}")
 with mlflow.start_run(run_name=AUGMENTATION or "baseline") as run:
     mlflow.log_param("original_dataset_size", len(train_dataset))
     if AUGMENTATION is not None:
@@ -86,15 +87,18 @@ training_args = TrainingArguments(
     metric_for_best_model="acc",
     log_steps=None,
 )
-model_cfg = ModelConfig(
-    attr={
-        "in_feat": 8,
-        "out_feat": 2,
-        "N": 128,
-        "M": 256,
-        "K": 512,
-    }
-)
+# PROBEN1
+# model_cfg = ModelConfig(
+#     attr={
+#         "in_feat": 8,
+#         "out_feat": 2,
+#         "N": 128,
+#         "M": 256,
+#         "K": 512,
+#     }
+# )
+# MNIST
+model_cfg = ModelConfig()
 
 # *** Training the CNN ***
 
@@ -106,7 +110,7 @@ with mlflow.start_run(run.info.run_id):
     # trainer
     trainer = Trainer(
         args=training_args,
-        model=ModelProben1(model_cfg),
+        model=ModelForClassification(model_cfg),
         train_dataset=train_dataset,
         test_dataset=test_dataset,
         compute_metrics=compute_metrics,

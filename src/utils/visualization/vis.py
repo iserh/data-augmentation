@@ -131,7 +131,7 @@ def plot_images(
     # plot the images that were used for generation
     if others is not None:
         i += 1
-        axes[i].title(kwargs.get("others_title", "Others"))
+        axes[i].set_title(kwargs.get("others_title", "Others"))
         axes[i].axis("off")
         axes[i].imshow(
             np.transpose(

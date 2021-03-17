@@ -48,6 +48,7 @@ class Generator:
         inputs, labels = next(iter(DataLoader(self.dataset, batch_size=len(self.dataset))))
         # encode to latent vectors
         latents, log_vars, _ = self.generative_model.encode_dataset(self.dataset).tensors
+        kwargs["std"] = kwargs.get("std", latents.std())
 
         all_good = False
         final_inputs, final_labels, final_generated_latents, final_origins, final_others = [], [], [], [], []
