@@ -27,6 +27,7 @@ class _Encoder(Encoder):
         self.variance_log = nn.Linear(64, z_dim)
 
         # initialize weights
+        self.linear_stage.apply(init_weights)
         self.mean.apply(init_weights)
         self.variance_log.apply(init_weights)
 

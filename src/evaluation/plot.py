@@ -1,37 +1,47 @@
 from pathlib import Path
 
 import vae
-from utils.data import get_dataset
 from utils.visualization import plot_images, plot_points
 from vae import VAEConfig, VAEForDataAugmentation
 
+import vae
+from utils.data import load_unsplitted_dataset
+from vae import VAEConfig
+import torch
+
+# *** Loading data ***
+
+SEED = 1337
 DATASET = "MNIST"
-vae.models.base.model_store = f"pretrained_models/{DATASET}/all_data_single"
-dataset = get_dataset(DATASET, train=False)
-filepath = Path(f"img/{DATASET}/beta_test")
+MIX = False
+# load datasets
+train_dataset, dataset_info = load_unsplitted_dataset(DATASET)
 
-for e in range(5, 51, 5):
-    vae_config = VAEConfig(z_dim=2, beta=0.001, attr={"mix": False, "multi_vae": False})
-    model = VAEForDataAugmentation.from_pretrained(vae_config, epochs=e)
+# *** Parameters for data augmentation ***
 
-    latents, _, labels = model.encode_dataset(dataset).tensors
+MULTI_VAE = True
+vae_config = VAEConfig(
+    z_dim=2,
+    beta=1.0,
+    label=3,
+    attr={
+        "mix": False,
+        "seed": SEED,
+    },
+)
+VAE_EPOCHS = 20
+# set model store path
+if MULTI_VAE:
+    vae.models.base.model_store = f"pretrained_models/{DATASET}/{sum(dataset_info['class_counts'])}"
+    # vae.models.base.model_store = f"pretrained_models/{DATASET}/60000"
+else:
+    vae.models.base.model_store = f"pretrained_models/{DATASET}/all_data_single"
 
-    (filepath / str(vae_config.beta)).mkdir(exist_ok=True, parents=True)
-    plot_points(
-        latents, labels=labels, filename=filepath / str(vae_config.beta) / f"epoch={e}.pdf", xlim=(-6, 6), ylim=(-6, 6)
-    )
+model = VAEForDataAugmentation.from_pretrained(vae_config, VAE_EPOCHS)
 
-
-# DATASET = "MNIST"
-# vae.models.base.model_store = f"pretrained_models/{DATASET}/all_data_single"
-# dataset = get_dataset(DATASET, train=False)
-# filepath = Path(f"img/{DATASET}/beta_test")
-
-# for beta in [1.0, 0.5, 0.1, 0.001]:
-#     vae_config = VAEConfig(z_dim=2, beta=beta, attr={"mix": False, "multi_vae": False})
-#     model = VAEForDataAugmentation.from_pretrained(vae_config, epochs=50)
-
-#     latents, _, labels = model.encode_dataset(dataset).tensors
-
-#     (filepath / str(vae_config.beta)).mkdir(exist_ok=True, parents=True)
-#     plot_points(latents, labels=labels, filename=filepath / f"beta={beta}.pdf", xlim=(-6, 6), ylim=(-6, 6))
+mean = torch.zeros(size=(100, vae_config.z_dim))
+std = torch.zeros_like(mean) + 1
+normal = torch.normal(mean, std)
+labels = torch.zeros(size=(100,))
+decoded = model.decode_dataset(torch.utils.data.TensorDataset(normal, labels)).tensors[0]
+plot_images(decoded, n=50, filename=f"img/label-{vae_config.label}-epoch-{VAE_EPOCHS}.pdf")

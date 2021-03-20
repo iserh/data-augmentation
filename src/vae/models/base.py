@@ -23,6 +23,7 @@ model_store = "pretrained_models/Default"
 class VAEConfig(ModelConfig):
     z_dim: Optional[int] = None
     beta: Optional[float] = None
+    label: Optional[int] = None
 
 
 @dataclass

@@ -2,7 +2,7 @@
 from typing import Any, Tuple
 
 import numpy as np
-import torch.nn as nn
+import torch.nn.functional as F
 from torch import Tensor
 
 
@@ -35,11 +35,9 @@ class VAELossOutput:
 class VAELoss:
     def __init__(self, beta: float = 1.0) -> None:
         self.beta = beta
-        self.reconstruction_loss = nn.BCELoss()
-        self.kl_divergence = lambda m, log_v: ((log_v.exp() + m ** 2 - 1 - log_v).sum(-1) * 0.5).mean()
 
     def __call__(self, reconstruction: Tensor, target: Tensor, m: Tensor, log_v: Tensor) -> VAELossOutput:
         input_dim = np.product(reconstruction.size()[1:])
-        r_l = self.reconstruction_loss(reconstruction, target) * input_dim
-        kld = self.kl_divergence(m, log_v)
+        r_l = F.binary_cross_entropy(reconstruction, target) * input_dim
+        kld = ((log_v.exp() + m ** 2 - 1 - log_v).sum(-1) * 0.5).mean()
         return VAELossOutput(r_l, kld, beta_norm=self.beta)

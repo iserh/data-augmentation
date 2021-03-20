@@ -7,6 +7,7 @@ from torch.utils.data import ConcatDataset, DataLoader, Subset, TensorDataset
 from yaml.loader import SafeLoader
 
 from utils.data import get_dataset
+from utils import seed_everything
 
 data_path = "datasets/splitted"
 
@@ -18,9 +19,7 @@ def split_datasets(
     balancing: bool = True,
     seed: Optional[int] = None,
 ) -> None:
-    # seed
-    if seed is not None:
-        torch.manual_seed(seed)
+    seed_everything(seed)
     # load dataset
     dataset = get_dataset(dataset_name, train=True)
     # optionally reduce size of the dataset

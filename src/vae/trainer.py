@@ -12,6 +12,7 @@ from utils.trainer import Trainer, TrainingArguments
 from utils.visualization import plot_images, plot_points
 from vae.models import VAEConfig, VAEForDataAugmentation, VAEOutput
 from vae.models.base import VAEModel
+from utils import seed_everything
 
 
 class VAETrainer(Trainer):
@@ -47,10 +48,7 @@ def train_vae(
     vae_config: VAEConfig,
     seed: Optional[int] = None,
 ) -> None:
-    # seed
-    if seed is not None:
-        torch.manual_seed(seed)
-        training_args.seed = seed
+    seed_everything(seed)
 
     # create model
     model = model_architecture(vae_config)
@@ -66,13 +64,8 @@ def train_vae(
     model = trainer.train()
     del model
 
-    # epochs trained
-    epochs_trained = training_args.epochs or int(
-        ceil(training_args.total_steps / ceil(len(train_dataset) / training_args.batch_size))
-    )
-
     # visualization
-    vae = VAEForDataAugmentation.from_pretrained(vae_config, epochs=epochs_trained)
+    vae = VAEForDataAugmentation.from_pretrained(vae_config, epochs=training_args.epochs)
 
     latents = vae.encode_dataset(train_dataset).tensors[0][:10_000]
     pca = PCA(2).fit(latents) if latents.size(-1) > 2 else None
@@ -93,8 +86,7 @@ def train_vae(
     )
 
     # random images
-    z = torch.normal(0, 1, size=(200, vae_config.z_dim))
-    labels = torch.ones((200,))  # arbitrary labels
-    fakes = vae.decode_dataset(TensorDataset(z, labels)).tensors[0]
+    z = torch.FloatTensor(size=(200, latents.size(-1))).uniform_(-1.5, 1.5)
+    fakes = vae.decode_dataset(TensorDataset(z, torch.ones((z.size(0),)))).tensors[0]
     plot_points(z, pca=pca, filename="random_latents.pdf")
     plot_images(fakes, 50, filename="random_fakes.pdf")

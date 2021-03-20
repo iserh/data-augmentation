@@ -87,6 +87,11 @@ def plot_images(
             origins_title (str): Title of the origins subplot
             others_title (str): Title of the others subplot
     """
+    # temporary
+    if images.size(1) == 1:
+        grayscale = True
+        kwargs["cmap"] = kwargs.get("cmap", "gray_r")
+
     n_plots = 1
     if origins is not None:
         n_plots += 1

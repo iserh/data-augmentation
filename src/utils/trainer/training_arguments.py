@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any
 
 
 @dataclass
@@ -14,6 +14,7 @@ class TrainingArguments:
     seed: Optional[int] = None
     batch_size: int = 64
     metric_for_best_model: Optional[str] = None
-    weight_decay: float = 5e-3
-    lr: float = 5e-4
+    weight_decay: float = 0
+    lr: float = 0.001
     num_workers: int = 4
+    optimizer: Optional[Any] = None

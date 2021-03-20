@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 from utils.mlflow import mlflow_active, mlflow_available
 from utils.models.model_config import ModelConfig
 from utils.visualization import plot_images, plot_points
+from utils import seed_everything
 from vae.models import VAEConfig, VAEForDataAugmentation
 
 from generative_classifier.models.base import GenerativeClassifierModel
@@ -54,7 +55,6 @@ class DataAugmentation:
             mlflow.log_params(
                 {
                     "vae_epochs": self.vae_epochs,
-                    "multi_vae": self.multi_vae,
                     "K": K,
                     "balancing": balancing,
                 }
@@ -62,14 +62,11 @@ class DataAugmentation:
             # log augmentation parameters
             mlflow.log_params(kwargs)
 
-        # seeding
-        if self.seed is not None:
-            torch.manual_seed(self.seed)
+        seed_everything(self.seed)
 
         # load generative classifier
         # load vae now if not using multi vae
         if not self.multi_vae:
-            print(self.vae_config)
             vae = VAEForDataAugmentation.from_pretrained(self.vae_config, epochs=self.vae_epochs)
         if self.gc_config is not None:
             gc = GenerativeClassifierModel.from_pretrained(self.gc_config, epochs=self.gc_epochs)
@@ -92,10 +89,7 @@ class DataAugmentation:
         for label, n_generate, dataset in zip(dataset_info["classes"], L, datasets):
             if self.multi_vae:
                 vae_config_label_i = VAEConfig(**self.vae_config.__dict__)
-                if vae_config_label_i.attr is None:
-                    vae_config_label_i.attr = {"label": label}
-                else:
-                    vae_config_label_i.attr["label"] = label
+                vae_config_label_i.label = label
                 vae = VAEForDataAugmentation.from_pretrained(vae_config_label_i, self.vae_epochs)
 
             gen = Generator(

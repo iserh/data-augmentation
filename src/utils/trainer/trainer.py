@@ -5,12 +5,14 @@ import pandas as pd
 import torch
 from numpy import ceil
 from torch import Tensor
-from torch.optim import Adam
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
+from torch.optim import Adam
 
 from utils.mlflow import mlflow_active, mlflow_available
 from utils.models import BaseModel, ModelOutput
+from utils import seed_everything
+from utils.data import BatchDataset
 
 from .training_arguments import TrainingArguments
 
@@ -36,12 +38,11 @@ class Trainer:
         # Model
         self.model = model.to(self.device)
         # Optimizer
-        self.optim = Adam(self.model.parameters(), weight_decay=args.weight_decay, lr=args.lr)
+        optimizer_cls = self.args.optimizer if self.args.optimizer is not None else Adam
+        self.optim = optimizer_cls(self.model.parameters(), weight_decay=args.weight_decay, lr=args.lr)
 
     def train(self) -> None:
-        # seeding
-        if self.args.seed is not None:
-            torch.manual_seed(self.args.seed)
+        seed_everything(self.args.seed)
 
         # create dataloaders
         train_loader = DataLoader(
@@ -58,7 +59,7 @@ class Trainer:
             mlflow.log_params(self.args.__dict__)
             mlflow.log_param("total_steps", self.args.epochs * len(train_loader))
             mlflow.log_params(self.model.config.__dict__)
-            mlflow.log_param("train_dataset_size", len(self.train_dataset))
+            mlflow.log_param("train_dataset_size", self.train_dataset.dataset_length() if isinstance(self.train_dataset, BatchDataset) else len(self.train_dataset))
             if self.test_dataset is not None:
                 mlflow.log_param("test_dataset_size", len(self.test_dataset))
 
@@ -98,8 +99,6 @@ class Trainer:
                 [outputs, pd.DataFrame(out)],
                 ignore_index=True,
             )
-            # compute step metrics
-            metrics = self._compute_metrics(outputs.iloc[-len(batch) :], update_best_metric=False)
             # log to mlflow
             if (
                 mlflow_active()
@@ -107,8 +106,11 @@ class Trainer:
                 and self.step % self.args.log_steps == 0
                 and self.step != 0
             ):
+                # compute step metrics
+                metrics = self._compute_metrics(outputs.iloc[-len(batch) * self.args.log_steps :], update_best_metric=False)
                 mlflow.log_metrics({"train_" + k: v for k, v in metrics.items()}, step=self.step)
             # progress bar
+            metrics = self._compute_metrics(outputs, update_best_metric=False)
             pbar.set_postfix({k: f"{v:7.2f}" for k, v in metrics.items()})
             pbar.update()
 

@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import torch
-from torch._C import dtype
+from utils import seed_everything
 from torch.utils.data import DataLoader, random_split
 from torch.utils.data.dataset import TensorDataset
 
@@ -10,9 +10,7 @@ from utils.data import get_dataset
 
 
 def create_all_datasets(dataset_name: str, dataset_limit: int, balance: bool = False, seed: Optional[int] = None):
-    # seed torch
-    if seed is not None:
-        torch.manual_seed(seed)
+    seed_everything(seed)
 
     # load train dataset
     train_dataset = get_dataset(dataset_name, train=True)
@@ -33,9 +31,7 @@ def create_all_datasets(dataset_name: str, dataset_limit: int, balance: bool = F
 
 
 def create_train_dataset(dataset_name: str, dataset_limit: int, balance: bool = False, seed: Optional[int] = None):
-    # seed torch
-    if seed is not None:
-        torch.manual_seed(seed)
+    seed_everything(seed)
 
     # load train dataset
     train_dataset = get_dataset(dataset_name, train=True)

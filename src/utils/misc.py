@@ -1,8 +1,12 @@
 """Miscellaneous utilities."""
 from pathlib import Path
+from typing import Optional
 from urllib.parse import unquote, urlparse
 
 import torch.nn as nn
+import torch
+import numpy as np
+import random
 
 
 def init_weights(module: nn.Module) -> None:
@@ -30,3 +34,12 @@ def uri_to_path(uri: str) -> Path:
         Path: The converted path
     """
     return Path(unquote(urlparse(uri).path))
+
+
+def seed_everything(seed: Optional[int] = None) -> None:
+    if seed is not None:
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+        torch.backends.cudnn.deterministic = True

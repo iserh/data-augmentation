@@ -6,6 +6,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 from utils.visualization import plot_images
+from utils import seed_everything
 from vae.models import VAEForDataAugmentation
 
 from generative_classifier.models import GenerativeClassifierModel
@@ -13,7 +14,7 @@ from generative_classifier.models import GenerativeClassifierModel
 from . import augmentations
 from .distribution import apply_distribution
 from .interpolation import apply_extrapolation, apply_interpolation
-from .noise import add_noise, normal_noise
+from .noise import add_noise, normal_noise, uniform_noise
 from .reparametrization import apply_reparametrization
 
 implementations = {
@@ -22,6 +23,7 @@ implementations = {
     augmentations.REPARAMETRIZATION: apply_reparametrization,
     augmentations.ADD_NOISE: add_noise,
     augmentations.NORMAL_NOISE: normal_noise,
+    augmentations.UNIFORM_NOISE: uniform_noise,
     augmentations.DISTRIBUTION: apply_distribution,
 }
 
@@ -40,9 +42,7 @@ class Generator:
         self.seed = seed
 
     def generate(self, augmentation: str, n: int, **kwargs) -> Tuple[TensorDataset, Tensor, Tensor, Tensor, Tensor]:
-        # seeding
-        if self.seed is not None:
-            torch.manual_seed(self.seed)
+        seed_everything(self.seed)
 
         # get the data from the dataset
         inputs, labels = next(iter(DataLoader(self.dataset, batch_size=len(self.dataset))))

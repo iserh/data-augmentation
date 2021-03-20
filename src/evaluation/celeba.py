@@ -20,7 +20,6 @@ vae_config = VAEConfig(
     z_dim=150,
     beta=1.0,
     attr={
-        "multi_vae": False,
         "mix": False,
     },
 )

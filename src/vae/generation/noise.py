@@ -19,3 +19,9 @@ def normal_noise(
     std = torch.zeros_like(latents) + 1
     normal = torch.normal(mean, std)
     return normal, None, None
+
+def uniform_noise(
+    real_images: Tensor, latents: Tensor, log_vars: Tensor, **kwargs
+) -> Tuple[Tensor, Tensor, Tensor]:
+    z = torch.FloatTensor(size=latents.size(), device=latents.device).uniform_(-1.5, 1.5)
+    return z, None, None

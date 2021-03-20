@@ -10,6 +10,9 @@ class BatchDataset(Dataset):
     def __init__(self, dataset: Dataset, batch_size: int) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
+    
+    def dataset_length(self) -> int:
+        return len(self.dataset)
 
     def __len__(self) -> int:
         return max(len(self.dataset), self.batch_size)

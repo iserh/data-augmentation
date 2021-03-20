@@ -1,6 +1,7 @@
 """CNN Model for MNIST."""
 import torch.nn as nn
 from torch import Tensor
+from utils import init_weights
 
 from utils.models import BaseModel, ModelConfig, ModelOutput
 
@@ -47,6 +48,8 @@ class CNNMNIST(BaseModel):
             nn.Linear(128, 10),
         )
         self.criterion = nn.CrossEntropyLoss()
+        # init weights
+        self.sequential.apply(init_weights)
 
     def forward(self, x: Tensor, y: Tensor) -> ModelOutput:
         """Forward pass.
